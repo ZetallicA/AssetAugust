@@ -1,0 +1,556 @@
+@model AssetManagement.Domain.Entities.Asset
+
+@{
+    ViewData["Title"] = "Create Asset";
+    var isProcurement = User.IsInRole("Procurement");
+    var isIT = User.IsInRole("IT");
+    var isFacilities = User.IsInRole("Facilities");
+    var isAdmin = User.IsInRole("Admin");
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="bi bi-plus-circle text-primary"></i> Create New Asset
+                    </h3>
+                    <p class="text-muted mb-0">
+                        @if (isProcurement)
+                        {
+                            <text><i class="bi bi-info-circle"></i> Procurement Mode: Quick entry with basic information</text>
+                        }
+                        else
+                        {
+                            <text><i class="bi bi-info-circle"></i> Complete asset setup with all details</text>
+                        }
+                    </p>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post" id="assetWizardForm">
+                        <!-- Progress Bar -->
+                        <div class="progress mb-4" style="height: 8px;">
+                            <div class="progress-bar" role="progressbar" style="width: 25%;" id="progressBar"></div>
+                        </div>
+
+                        <!-- Step Indicators -->
+                        <div class="d-flex justify-content-between mb-4">
+                            <div class="step-indicator active" data-step="1">
+                                <div class="step-number">1</div>
+                                <div class="step-label">Basic Info</div>
+                            </div>
+                            <div class="step-indicator" data-step="2">
+                                <div class="step-number">2</div>
+                                <div class="step-label">Location</div>
+                            </div>
+                            <div class="step-indicator" data-step="3">
+                                <div class="step-number">3</div>
+                                <div class="step-label">Technical</div>
+                            </div>
+                            <div class="step-indicator" data-step="4">
+                                <div class="step-number">4</div>
+                                <div class="step-label">Purchase</div>
+                            </div>
+                        </div>
+
+                        <!-- Step 1: Basic Information -->
+                        <div class="wizard-step active" data-step="1">
+                            <h5 class="mb-3">
+                                <i class="bi bi-info-circle text-primary"></i> Basic Information
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    @if (!isProcurement)
+                                    {
+                                        <div class="mb-3">
+                                            <label asp-for="AssetTag" class="form-label">Asset Tag *</label>
+                                            <input asp-for="AssetTag" class="form-control" required>
+                                            <span asp-validation-for="AssetTag" class="text-danger"></span>
+                                            <small class="form-text text-muted">Required for IT and Facilities staff</small>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="mb-3">
+                                            <label asp-for="AssetTag" class="form-label">Asset Tag</label>
+                                            <input asp-for="AssetTag" class="form-control">
+                                            <span asp-validation-for="AssetTag" class="text-danger"></span>
+                                            <small class="form-text text-muted">Can be added later by IT/Facilities staff</small>
+                                        </div>
+                                    }
+
+                                    <div class="mb-3">
+                                        <label asp-for="SerialNumber" class="form-label">Serial Number *</label>
+                                        <input asp-for="SerialNumber" class="form-control" required>
+                                        <span asp-validation-for="SerialNumber" class="text-danger"></span>
+                                        <small class="form-text text-muted">Required for all users</small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Manufacturer" class="form-label">Manufacturer *</label>
+                                        <input asp-for="Manufacturer" class="form-control" required>
+                                        <span asp-validation-for="Manufacturer" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Category" class="form-label">Category *</label>
+                                        <select asp-for="Category" class="form-select" required>
+                                            <option value="">Select Category</option>
+                                            <option value="Desktop">Desktop</option>
+                                            <option value="Laptop">Laptop</option>
+                                            <option value="Monitor">Monitor</option>
+                                            <option value="Printer">Printer</option>
+                                            <option value="Network Device">Network Device</option>
+                                            <option value="Phone">Phone</option>
+                                            <option value="Furniture">Furniture</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                        <span asp-validation-for="Category" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="Model" class="form-label">Model</label>
+                                        <input asp-for="Model" class="form-control">
+                                        <span asp-validation-for="Model" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="ServiceTag" class="form-label">Service Tag</label>
+                                        <input asp-for="ServiceTag" class="form-control">
+                                        <span asp-validation-for="ServiceTag" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Status" class="form-label">Status</label>
+                                        <select asp-for="Status" class="form-select">
+                                            <option value="Active">Active</option>
+                                            <option value="Inactive">Inactive</option>
+                                            <option value="Maintenance">Maintenance</option>
+                                            <option value="Retired">Retired</option>
+                                            <option value="Lost">Lost</option>
+                                        </select>
+                                        <span asp-validation-for="Status" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Location & Assignment -->
+                        <div class="wizard-step" data-step="2">
+                            <h5 class="mb-3">
+                                <i class="bi bi-geo-alt text-primary"></i> Location & Assignment
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="Location" class="form-label">Location</label>
+                                        <select asp-for="Location" class="form-select" id="locationSelect">
+                                            <option value="">Select Location</option>
+                                            <option value="66JOHN">66 John Street (Manhattan)</option>
+                                            <option value="9BOND">9 Bond Street (Brooklyn)</option>
+                                            <option value="260E161">260 E. 161 Street (Bronx)</option>
+                                            <option value="310047">31-00 47 Avenue (Queens)</option>
+                                            <option value="350STMARKS">350 St. Marks Place (Staten Island)</option>
+                                        </select>
+                                        <span asp-validation-for="Location" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Floor" class="form-label">Floor</label>
+                                        <select asp-for="Floor" class="form-select" id="floorSelect">
+                                            <option value="">Select Floor</option>
+                                        </select>
+                                        <span asp-validation-for="Floor" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Desk" class="form-label">Desk</label>
+                                        <input asp-for="Desk" class="form-control">
+                                        <span asp-validation-for="Desk" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="AssignedUserName" class="form-label">Assigned User Name</label>
+                                        <input asp-for="AssignedUserName" class="form-control">
+                                        <span asp-validation-for="AssignedUserName" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="AssignedUserEmail" class="form-label">Assigned User Email</label>
+                                        <input asp-for="AssignedUserEmail" type="email" class="form-control">
+                                        <span asp-validation-for="AssignedUserEmail" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Department" class="form-label">Department</label>
+                                        <input asp-for="Department" class="form-control">
+                                        <span asp-validation-for="Department" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Unit" class="form-label">Unit</label>
+                                        <input asp-for="Unit" class="form-control">
+                                        <span asp-validation-for="Unit" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Technical Details -->
+                        <div class="wizard-step" data-step="3">
+                            <h5 class="mb-3">
+                                <i class="bi bi-cpu text-primary"></i> Technical Details
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="IpAddress" class="form-label">IP Address</label>
+                                        <input asp-for="IpAddress" class="form-control">
+                                        <span asp-validation-for="IpAddress" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="MacAddress" class="form-label">MAC Address</label>
+                                        <input asp-for="MacAddress" class="form-control">
+                                        <span asp-validation-for="MacAddress" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="NetName" class="form-label">Network Name</label>
+                                        <input asp-for="NetName" class="form-control">
+                                        <span asp-validation-for="NetName" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="WallPort" class="form-label">Wall Port</label>
+                                        <input asp-for="WallPort" class="form-control">
+                                        <span asp-validation-for="WallPort" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="SwitchName" class="form-label">Switch Name</label>
+                                        <input asp-for="SwitchName" class="form-control">
+                                        <span asp-validation-for="SwitchName" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="SwitchPort" class="form-label">Switch Port</label>
+                                        <input asp-for="SwitchPort" class="form-control">
+                                        <span asp-validation-for="SwitchPort" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="OsVersion" class="form-label">OS Version</label>
+                                        <input asp-for="OsVersion" class="form-control">
+                                        <span asp-validation-for="OsVersion" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Notes" class="form-label">Notes</label>
+                                        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                                        <span asp-validation-for="Notes" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Purchase Information -->
+                        <div class="wizard-step" data-step="4">
+                            <h5 class="mb-3">
+                                <i class="bi bi-receipt text-primary"></i> Purchase Information
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="PurchasePrice" class="form-label">Purchase Price</label>
+                                        <input asp-for="PurchasePrice" type="number" step="0.01" class="form-control">
+                                        <span asp-validation-for="PurchasePrice" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="OrderNumber" class="form-label">Order Number</label>
+                                        <input asp-for="OrderNumber" class="form-control">
+                                        <span asp-validation-for="OrderNumber" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Vendor" class="form-label">Vendor</label>
+                                        <input asp-for="Vendor" class="form-control">
+                                        <span asp-validation-for="Vendor" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="VendorInvoice" class="form-label">Vendor Invoice</label>
+                                        <input asp-for="VendorInvoice" class="form-control">
+                                        <span asp-validation-for="VendorInvoice" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="PurchaseDate" class="form-label">Purchase Date</label>
+                                        <input asp-for="PurchaseDate" type="date" class="form-control">
+                                        <span asp-validation-for="PurchaseDate" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="WarrantyStart" class="form-label">Warranty Start</label>
+                                        <input asp-for="WarrantyStart" type="date" class="form-control">
+                                        <span asp-validation-for="WarrantyStart" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="WarrantyEndDate" class="form-label">Warranty End Date</label>
+                                        <input asp-for="WarrantyEndDate" type="date" class="form-control">
+                                        <span asp-validation-for="WarrantyEndDate" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Navigation Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" class="btn btn-secondary" id="prevBtn" style="display: none;">
+                                <i class="bi bi-arrow-left"></i> Previous
+                            </button>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-primary" id="nextBtn">
+                                    Next <i class="bi bi-arrow-right"></i>
+                                </button>
+                                <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
+                                    <i class="bi bi-save"></i> Create Asset
+                                </button>
+                                <a asp-action="Index" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i> Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .step-indicator {
+        text-align: center;
+        flex: 1;
+        position: relative;
+    }
+
+    .step-indicator:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background-color: #e9ecef;
+        z-index: 1;
+    }
+
+    .step-indicator.active:not(:last-child)::after {
+        background-color: #007bff;
+    }
+
+    .step-number {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 5px;
+        font-weight: bold;
+        position: relative;
+        z-index: 2;
+    }
+
+    .step-indicator.active .step-number {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .step-indicator.completed .step-number {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .step-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .step-indicator.active .step-label {
+        color: #007bff;
+        font-weight: 600;
+    }
+
+    .wizard-step {
+        display: none;
+    }
+
+    .wizard-step.active {
+        display: block;
+    }
+
+    .progress-bar {
+        transition: width 0.3s ease;
+    }
+</style>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        let currentStep = 1;
+        let totalSteps = 4;
+        
+        // Floor data for each location
+        const floorData = {
+            '66JOHN': ['Floor 10', 'Floor 11'],
+            '9BOND': ['Floor 6', 'Floor 7'],
+            '260E161': ['Floor 6'],
+            '310047': ['Floor 3', 'Floor 4'],
+            '350STMARKS': ['Main Floor']
+        };
+
+        // Initialize the wizard
+        $(document).ready(function() {
+            @if (isProcurement)
+            {
+                <text>
+                totalSteps = 1;
+                </text>
+            }
+            
+            updateStepDisplay();
+            setupLocationChangeHandler();
+        });
+
+        // Next button handler
+        $('#nextBtn').click(function() {
+            if (validateCurrentStep()) {
+                if (currentStep < totalSteps) {
+                    currentStep++;
+                    updateStepDisplay();
+                }
+            }
+        });
+
+        // Previous button handler
+        $('#prevBtn').click(function() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateStepDisplay();
+            }
+        });
+
+        // Update step display
+        function updateStepDisplay() {
+            // Hide all steps
+            $('.wizard-step').removeClass('active');
+            
+            // Show current step
+            $(`.wizard-step[data-step="${currentStep}"]`).addClass('active');
+            
+            // Update progress bar
+            const progress = (currentStep / totalSteps) * 100;
+            $('#progressBar').css('width', progress + '%');
+            
+            // Update step indicators
+            $('.step-indicator').removeClass('active completed');
+            
+            for (let i = 1; i <= totalSteps; i++) {
+                const indicator = $(`.step-indicator[data-step="${i}"]`);
+                if (i < currentStep) {
+                    indicator.addClass('completed');
+                } else if (i === currentStep) {
+                    indicator.addClass('active');
+                }
+            }
+            
+            // Update buttons
+            if (currentStep === 1) {
+                $('#prevBtn').hide();
+            } else {
+                $('#prevBtn').show();
+            }
+            
+            if (currentStep === totalSteps) {
+                $('#nextBtn').hide();
+                $('#submitBtn').show();
+            } else {
+                $('#nextBtn').show();
+                $('#submitBtn').hide();
+            }
+        }
+
+        // Validate current step
+        function validateCurrentStep() {
+            const currentStepElement = $(`.wizard-step[data-step="${currentStep}"]`);
+            const requiredFields = currentStepElement.find('[required]');
+            let isValid = true;
+            
+            requiredFields.each(function() {
+                if (!$(this).val()) {
+                    $(this).addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+            
+            if (!isValid) {
+                // Show validation message
+                const stepName = $(`.step-indicator[data-step="${currentStep}"] .step-label`).text();
+                alert(`Please complete all required fields in the ${stepName} step.`);
+            }
+            
+            return isValid;
+        }
+
+        // Setup location change handler
+        function setupLocationChangeHandler() {
+            $('#locationSelect').change(function() {
+                const selectedLocation = $(this).val();
+                const floorSelect = $('#floorSelect');
+                
+                // Clear current options
+                floorSelect.empty();
+                floorSelect.append('<option value="">Select Floor</option>');
+                
+                // Add new options based on selected location
+                if (selectedLocation && floorData[selectedLocation]) {
+                    floorData[selectedLocation].forEach(function(floor) {
+                        floorSelect.append(`<option value="${floor}">${floor}</option>`);
+                    });
+                }
+            });
+        }
+
+        // Form submission
+        $('#assetWizardForm').submit(function(e) {
+            if (!validateCurrentStep()) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
+}

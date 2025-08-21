@@ -1,0 +1,1869 @@
+@model PaginatedList<AssetManagement.Domain.Entities.Asset>
+
+@{
+    ViewData["Title"] = "Assets";
+}
+
+<style>
+    .pagination .page-link {
+        color: #007bff;
+        border-color: #dee2e6;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+    
+    .pagination .page-link:hover {
+        color: #0056b3;
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+    }
+    
+    .sortable-header {
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .sortable-header:hover {
+        background-color: #f8f9fa;
+    }
+    
+         .table-container {
+         overflow-x: auto;
+         scroll-behavior: smooth;
+     }
+     
+     /* Compact table styles */
+     .table {
+         font-size: 0.875rem;
+     }
+     
+     .table th {
+         font-size: 0.8rem;
+         font-weight: 600;
+         white-space: normal;
+         word-wrap: break-word;
+         max-width: 120px;
+         min-width: 80px;
+         vertical-align: top;
+         padding: 0.5rem 0.25rem;
+         line-height: 1.2;
+     }
+     
+     .table td {
+         font-size: 0.8rem;
+         padding: 0.375rem 0.25rem;
+         max-width: 120px;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         white-space: nowrap;
+         vertical-align: middle;
+     }
+     
+     .table td:hover {
+         overflow: visible;
+         white-space: normal;
+         word-wrap: break-word;
+         background-color: #f8f9fa;
+         position: relative;
+         z-index: 10;
+     }
+     
+     /* Tooltip for truncated text */
+     .table td[title] {
+         cursor: help;
+     }
+     
+     /* Compact badges */
+     .badge {
+         font-size: 0.7rem;
+         padding: 0.25rem 0.5rem;
+     }
+     
+     /* Compact buttons */
+     .btn-group-sm .btn {
+         padding: 0.25rem 0.5rem;
+         font-size: 0.75rem;
+     }
+     
+     /* Compact form controls */
+     .form-select-sm {
+         font-size: 0.8rem;
+         padding: 0.25rem 0.5rem;
+         margin-left: 0.5rem;
+     }
+     
+     /* Ensure dropdown arrow doesn't overlap with text */
+     .form-select {
+         background-position: right 0.375rem center;
+         padding-right: 1.5rem;
+     }
+    
+    /* Inline navigation styles */
+    .table-navigation-inline {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+        justify-content: center;
+        margin: 0 10px;
+    }
+    
+    .nav-arrow-inline {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: #6c757d;
+    }
+    
+    .nav-arrow-inline:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+        color: #495057;
+    }
+    
+    .nav-arrow-inline.disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        background: #f8f9fa;
+        color: #adb5bd;
+    }
+    
+    /* Progress bar styles */
+    .scroll-progress-container {
+        position: relative;
+        width: 60px;
+        height: 4px;
+        background: #e9ecef;
+        border-radius: 2px;
+        margin: 0 8px;
+        overflow: hidden;
+    }
+    
+    .scroll-progress-bar {
+        height: 100%;
+        background: #007bff;
+        border-radius: 2px;
+        width: 0%;
+        transition: width 0.3s ease;
+    }
+    
+    /* Drag and drop styles */
+    .visible-column-item {
+        background: #fff;
+        transition: all 0.2s ease;
+    }
+    
+    .visible-column-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .visible-column-item.dragging {
+        opacity: 0.5;
+        transform: rotate(2deg);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .visible-column-item.drag-over {
+        border-color: #007bff;
+        background: #e3f2fd;
+        transform: scale(1.02);
+    }
+    
+    .drag-handle {
+        cursor: grab;
+    }
+    
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+</style>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-6">
+            <i class="bi bi-pc-display text-primary"></i> Assets
+        </h1>
+    </div>
+</div>
+
+@if (User.IsInRole("Admin"))
+{
+    <div class="card shadow mb-3">
+        <div class="card-header bg-warning text-dark">
+            <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Admin Operations</h6>
+        </div>
+        <div class="card-body">
+            <div class="d-flex gap-2 mb-3">
+                <button type="button" class="btn btn-danger" id="bulkDeleteBtn" onclick="submitBulkDelete()" style="display: none;">
+                    <i class="bi bi-trash"></i> Delete Selected
+                </button>
+                
+                <a asp-action="ReviewErrors" class="btn btn-info">
+                    <i class="bi bi-pencil-square"></i> Review & Edit Errors
+                </a>
+                
+                <a asp-action="ClearImportErrors" class="btn btn-secondary" onclick="return confirm('Are you sure you want to clear all import errors?')">
+                    <i class="bi bi-x-circle"></i> Clear Errors
+                </a>
+            </div>
+            
+            @if (User.IsInRole("Admin") || User.IsInRole("IT") || User.IsInRole("Procurement"))
+            {
+                <div class="d-flex gap-2">
+                    <a asp-action="Create" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add Asset
+                    </a>
+                    <a asp-action="Import" class="btn btn-success">
+                        <i class="bi bi-upload"></i> Import
+                    </a>
+                    <a asp-action="TestImport" class="btn btn-warning">
+                        <i class="bi bi-bug"></i> Test Import
+                    </a>
+                </div>
+            }
+            
+            <form id="bulkDeleteForm" method="post" asp-action="BulkDelete" style="display: none;">
+                <!-- Hidden form for submission -->
+            </form>
+        </div>
+    </div>
+}
+
+<div class="card shadow">
+    <div class="card-header py-3">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex gap-2 align-items-center">
+                    <form asp-action="Index" method="get" class="d-flex me-2">
+                        <input type="text" name="searchTerm" class="form-control me-2" placeholder="Search assets..." value="@ViewData["CurrentFilter"]" />
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-search"></i>
+                        </button>
+                        @if (!string.IsNullOrEmpty(ViewData["CurrentFilter"]?.ToString()))
+                        {
+                            <a asp-action="Index" class="btn btn-outline-secondary ms-2">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </a>
+                        }
+                    </form>
+                    
+                    <!-- Export button moved here -->
+                    <button type="button" class="btn btn-outline-success" onclick="exportVisibleColumns()" title="Export Visible Columns">
+                        <i class="bi bi-download"></i> Export
+                    </button>
+
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="d-flex align-items-center justify-content-end">
+                    <label class="me-3 text-muted small">Show:</label>
+                    <select class="form-select form-select-sm" style="width: 80px; min-width: 80px;" onchange="changePageSize(this.value)">
+                        <option value="10" selected="@(Model.PageSize == 10)">10</option>
+                        <option value="25" selected="@(Model.PageSize == 25)">25</option>
+                        <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                        <option value="100" selected="@(Model.PageSize == 100)">100</option>
+                    </select>
+                    
+                    <!-- Navigation arrows -->
+                    <div class="table-navigation-inline ms-3">
+                        <button type="button" class="nav-arrow-inline left" id="navLeftInline" style="display: none;" title="Scroll Left">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <div class="scroll-progress-container" id="scrollProgressContainer" style="display: none;">
+                            <div class="scroll-progress-bar" id="scrollProgressBar"></div>
+                        </div>
+                        <button type="button" class="nav-arrow-inline right" id="navRightInline" style="display: none;" title="Scroll Right">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        @if (Model != null && Model.Items.Any())
+        {
+            <div class="table-container">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <th>
+                                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" />
+                                </th>
+                            }
+                            <th class="column-assetTag">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["AssetTagSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Asset Tag
+                                    @if (ViewData["CurrentSort"]?.ToString() == "assetTag_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-serialNumber">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["SerialNumberSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Serial Number
+                                    @if (ViewData["CurrentSort"]?.ToString() == "serialNumber_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "serialNumber")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-serviceTag">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["ServiceTagSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Service Tag
+                                    @if (ViewData["CurrentSort"]?.ToString() == "serviceTag_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "serviceTag")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-manufacturer">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["ManufacturerSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Manufacturer
+                                    @if (ViewData["CurrentSort"]?.ToString() == "manufacturer_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "manufacturer")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-model">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["ModelSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Model
+                                    @if (ViewData["CurrentSort"]?.ToString() == "model_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "model")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-category">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["CategorySortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Category
+                                    @if (ViewData["CurrentSort"]?.ToString() == "category_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "category")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-netName">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["NetNameSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Net Name
+                                    @if (ViewData["CurrentSort"]?.ToString() == "netName_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "netName")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-assignedUser">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["AssignedUserSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Assigned User
+                                    @if (ViewData["CurrentSort"]?.ToString() == "assignedUser_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "assignedUser")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-assignedUserEmail">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["AssignedUserEmailSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Assigned User Email
+                                    @if (ViewData["CurrentSort"]?.ToString() == "assignedUserEmail_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "assignedUserEmail")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-manager">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["ManagerSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Manager
+                                    @if (ViewData["CurrentSort"]?.ToString() == "manager_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "manager")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-department">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["DepartmentSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Department
+                                    @if (ViewData["CurrentSort"]?.ToString() == "department_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "department")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-unit">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["UnitSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Unit
+                                    @if (ViewData["CurrentSort"]?.ToString() == "unit_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "unit")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-location">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["LocationSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Location
+                                    @if (ViewData["CurrentSort"]?.ToString() == "location_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "location")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-floor">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["FloorSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Floor
+                                    @if (ViewData["CurrentSort"]?.ToString() == "floor_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "floor")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-desk">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["DeskSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Desk
+                                    @if (ViewData["CurrentSort"]?.ToString() == "desk_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "desk")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-status">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["StatusSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Status
+                                    @if (ViewData["CurrentSort"]?.ToString() == "status_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "status")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-ipAddress">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["IpAddressSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    IP Address
+                                    @if (ViewData["CurrentSort"]?.ToString() == "ipAddress_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "ipAddress")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-macAddress">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["MacAddressSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    MAC Address
+                                    @if (ViewData["CurrentSort"]?.ToString() == "macAddress_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "macAddress")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-wallPort">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["WallPortSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Wall Port
+                                    @if (ViewData["CurrentSort"]?.ToString() == "wallPort_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "wallPort")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-switchName">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["SwitchNameSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Switch Name
+                                    @if (ViewData["CurrentSort"]?.ToString() == "switchName_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "switchName")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-switchPort">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["SwitchPortSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Switch Port
+                                    @if (ViewData["CurrentSort"]?.ToString() == "switchPort_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "switchPort")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-phoneNumber">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["PhoneNumberSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Phone Number
+                                    @if (ViewData["CurrentSort"]?.ToString() == "phoneNumber_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "phoneNumber")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-extension">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["ExtensionSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Extension
+                                    @if (ViewData["CurrentSort"]?.ToString() == "extension_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "extension")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-imei">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["ImeiSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    IMEI
+                                    @if (ViewData["CurrentSort"]?.ToString() == "imei_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "imei")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-cardNumber">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["CardNumberSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Card Number
+                                    @if (ViewData["CurrentSort"]?.ToString() == "cardNumber_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "cardNumber")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-osVersion">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["OsVersionSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    OS Version
+                                    @if (ViewData["CurrentSort"]?.ToString() == "osVersion_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "osVersion")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-license1">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["License1SortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    License1
+                                    @if (ViewData["CurrentSort"]?.ToString() == "license1_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "license1")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-license2">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["License2SortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    License2
+                                    @if (ViewData["CurrentSort"]?.ToString() == "license2_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "license2")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-license3">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["License3SortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    License3
+                                    @if (ViewData["CurrentSort"]?.ToString() == "license3_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "license3")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-license4">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["License4SortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    License4
+                                    @if (ViewData["CurrentSort"]?.ToString() == "license4_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "license4")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-license5">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["License5SortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    License5
+                                    @if (ViewData["CurrentSort"]?.ToString() == "license5_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "license5")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-purchaseOrderNumber">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["PurchaseOrderNumberSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Purchase Order Number
+                                    @if (ViewData["CurrentSort"]?.ToString() == "purchaseOrderNumber_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "purchaseOrderNumber")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-vendor">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["VendorSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Vendor
+                                    @if (ViewData["CurrentSort"]?.ToString() == "vendor_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "vendor")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-vendorInvoice">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["VendorInvoiceSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Vendor Invoice
+                                    @if (ViewData["CurrentSort"]?.ToString() == "vendorInvoice_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "vendorInvoice")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-purchaseDate">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["PurchaseDateSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Purchase Date
+                                    @if (ViewData["CurrentSort"]?.ToString() == "purchaseDate_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "purchaseDate")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-warrantyStart">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["WarrantyStartSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Warranty Start
+                                    @if (ViewData["CurrentSort"]?.ToString() == "warrantyStart_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "warrantyStart")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-warrantyEnd">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["WarrantyEndSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Warranty End
+                                    @if (ViewData["CurrentSort"]?.ToString() == "warrantyEnd_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "warrantyEnd")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-notes">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["NotesSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Notes
+                                    @if (ViewData["CurrentSort"]?.ToString() == "notes_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "notes")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-createdAt">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["CreatedAtSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Created At
+                                    @if (ViewData["CurrentSort"]?.ToString() == "createdAt_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "createdAt")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-createdBy">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["CreatedBySortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Created By
+                                    @if (ViewData["CurrentSort"]?.ToString() == "createdBy_desc")
+                                    {
+                                        <i class="bi bi-sort-down"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "createdBy")
+                                    {
+                                        <i class="bi bi-sort-up"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-sort"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th class="column-actions">
+                                <div class="d-flex flex-column align-items-center">
+                                    <div class="mb-1">Actions</div>
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="Column Settings">
+                                            <i class="bi bi-gear"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var asset in Model.Items)
+                        {
+                            <tr data-asset-id="@asset.Id">
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <td>
+                                        <input type="checkbox" name="selectedIds" class="asset-checkbox" value="@asset.Id" onchange="updateBulkDeleteButton()" />
+                                    </td>
+                                }
+                                                                 <td class="column-assetTag" title="@asset.AssetTag"><strong>@asset.AssetTag</strong></td>
+                                 <td class="column-serialNumber" title="@asset.SerialNumber">@asset.SerialNumber</td>
+                                 <td class="column-serviceTag" title="@asset.ServiceTag">@asset.ServiceTag</td>
+                                 <td class="column-manufacturer" title="@asset.Manufacturer">@asset.Manufacturer</td>
+                                 <td class="column-model" title="@asset.Model">@asset.Model</td>
+                                 <td class="column-category">
+                                     <span class="badge bg-secondary">@asset.Category</span>
+                                 </td>
+                                 <td class="column-netName" title="@asset.NetName">@asset.NetName</td>
+                                 <td class="column-assignedUser" title="@asset.AssignedUserName">@asset.AssignedUserName</td>
+                                 <td class="column-assignedUserEmail" title="@asset.AssignedUserEmail">@asset.AssignedUserEmail</td>
+                                 <td class="column-manager" title="@asset.Manager">@asset.Manager</td>
+                                 <td class="column-department" title="@asset.Department">@asset.Department</td>
+                                 <td class="column-unit" title="@asset.Unit">@asset.Unit</td>
+                                 <td class="column-location" title="@asset.Location">@asset.Location</td>
+                                 <td class="column-floor" title="@asset.Floor">@asset.Floor</td>
+                                 <td class="column-desk" title="@asset.Desk">@asset.Desk</td>
+                                 <td class="column-status">
+                                     @{
+                                         var statusClass = asset.Status?.ToLower() switch
+                                         {
+                                             "active" => "bg-success",
+                                             "inactive" => "bg-secondary",
+                                             "maintenance" => "bg-warning",
+                                             "retired" => "bg-danger",
+                                             _ => "bg-info"
+                                         };
+                                     }
+                                     <span class="badge @statusClass">@asset.Status</span>
+                                 </td>
+                                 <td class="column-ipAddress" title="@asset.IpAddress">@asset.IpAddress</td>
+                                 <td class="column-macAddress" title="@asset.MacAddress">@asset.MacAddress</td>
+                                 <td class="column-wallPort" title="@asset.WallPort">@asset.WallPort</td>
+                                 <td class="column-switchName" title="@asset.SwitchName">@asset.SwitchName</td>
+                                 <td class="column-switchPort" title="@asset.SwitchPort">@asset.SwitchPort</td>
+                                 <td class="column-phoneNumber" title="@asset.PhoneNumber">@asset.PhoneNumber</td>
+                                 <td class="column-extension" title="@asset.Extension">@asset.Extension</td>
+                                 <td class="column-imei" title="@asset.Imei">@asset.Imei</td>
+                                 <td class="column-cardNumber" title="@asset.CardNumber">@asset.CardNumber</td>
+                                 <td class="column-osVersion" title="@asset.OsVersion">@asset.OsVersion</td>
+                                 <td class="column-license1" title="@asset.License1">@asset.License1</td>
+                                 <td class="column-license2" title="@asset.License2">@asset.License2</td>
+                                 <td class="column-license3" title="@asset.License3">@asset.License3</td>
+                                 <td class="column-license4" title="@asset.License4">@asset.License4</td>
+                                 <td class="column-license5" title="@asset.License5">@asset.License5</td>
+                                 <td class="column-purchaseOrderNumber" title="@asset.OrderNumber">@asset.OrderNumber</td>
+                                 <td class="column-vendor" title="@asset.Vendor">@asset.Vendor</td>
+                                 <td class="column-vendorInvoice" title="@asset.VendorInvoice">@asset.VendorInvoice</td>
+                                 <td class="column-purchaseDate" title="@(asset.PurchaseDate?.ToString("MM/dd/yyyy"))">@(asset.PurchaseDate?.ToString("MM/dd/yyyy"))</td>
+                                 <td class="column-warrantyStart" title="@(asset.WarrantyStart?.ToString("MM/dd/yyyy"))">@(asset.WarrantyStart?.ToString("MM/dd/yyyy"))</td>
+                                 <td class="column-warrantyEnd" title="@(asset.WarrantyEndDate?.ToString("MM/dd/yyyy"))">@(asset.WarrantyEndDate?.ToString("MM/dd/yyyy"))</td>
+                                 <td class="column-notes" title="@asset.Notes">@asset.Notes</td>
+                                 <td class="column-createdAt" title="@asset.CreatedAt.ToString("MM/dd/yyyy HH:mm")">@asset.CreatedAt.ToString("MM/dd/yyyy")</td>
+                                 <td class="column-createdBy" title="@asset.CreatedBy">@asset.CreatedBy</td>
+                                <td class="column-actions">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a asp-action="Details" asp-route-id="@asset.Id" class="btn btn-outline-primary" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        @if (User.IsInRole("Admin") || User.IsInRole("IT") || User.IsInRole("Procurement"))
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@asset.Id" class="btn btn-outline-secondary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        }
+                                        @if (User.IsInRole("Admin") || User.IsInRole("IT"))
+                                        {
+                                            <a asp-action="Delete" asp-route-id="@asset.Id" class="btn btn-outline-danger" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if (Model.TotalPages > 1)
+            {
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div class="text-muted">
+                        Showing @((Model.PageIndex - 1) * Model.PageSize + 1) to @Math.Min(Model.PageIndex * Model.PageSize, Model.TotalCount) of @Model.TotalCount assets
+                    </div>
+                    <nav aria-label="Asset pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            @if (Model.HasPreviousPage)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex - 1)" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-sortOrder="@ViewData["CurrentSort"]" asp-route-pageSize="@Model.PageSize">
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </a>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="page-item disabled">
+                                    <span class="page-link">
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </span>
+                                </li>
+                            }
+
+                            @{
+                                var startPage = Math.Max(1, Model.PageIndex - 2);
+                                var endPage = Math.Min(Model.TotalPages, Model.PageIndex + 2);
+                            }
+
+                            @if (startPage > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index" asp-route-page="1" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-sortOrder="@ViewData["CurrentSort"]" asp-route-pageSize="@Model.PageSize">1</a>
+                                </li>
+                                @if (startPage > 2)
+                                {
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                }
+                            }
+
+                            @for (int i = startPage; i <= endPage; i++)
+                            {
+                                <li class="page-item @(i == Model.PageIndex ? "active" : "")">
+                                    <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-sortOrder="@ViewData["CurrentSort"]" asp-route-pageSize="@Model.PageSize">@i</a>
+                                </li>
+                            }
+
+                            @if (endPage < Model.TotalPages)
+                            {
+                                @if (endPage < Model.TotalPages - 1)
+                                {
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                }
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-sortOrder="@ViewData["CurrentSort"]" asp-route-pageSize="@Model.PageSize">@Model.TotalPages</a>
+                                </li>
+                            }
+
+                            @if (Model.HasNextPage)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex + 1)" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-sortOrder="@ViewData["CurrentSort"]" asp-route-pageSize="@Model.PageSize">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="page-item disabled">
+                                    <span class="page-link">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                </div>
+            }
+            else
+            {
+                <div class="mt-3">
+                    <small class="text-muted">Showing @Model.TotalCount assets</small>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-pc-display fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No Assets Found</h4>
+                <p class="text-muted">
+                    No assets have been added yet. Start by adding assets manually or importing from Excel.
+                </p>
+                @if (User.IsInRole("Admin") || User.IsInRole("IT") || User.IsInRole("Procurement"))
+                {
+                    <div class="mt-3">
+                        <a asp-action="Create" class="btn btn-primary me-2">
+                            <i class="bi bi-plus-circle"></i> Add Asset
+                        </a>
+                        <a asp-action="Import" class="btn btn-success">
+                            <i class="bi bi-upload"></i> Import Assets
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@if (User.IsInRole("Admin"))
+{
+    <script>
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            const assetCheckboxes = document.querySelectorAll('.asset-checkbox');
+            
+            assetCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+            
+            updateBulkDeleteButton();
+        }
+        
+        function updateBulkDeleteButton() {
+            const selectedCheckboxes = document.querySelectorAll('.asset-checkbox:checked');
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            
+            if (selectedCheckboxes.length > 0) {
+                bulkDeleteBtn.style.display = 'inline';
+            } else {
+                bulkDeleteBtn.style.display = 'none';
+            }
+        }
+        
+        function submitBulkDelete() {
+            const selectedCheckboxes = document.querySelectorAll('.asset-checkbox:checked');
+            
+            if (selectedCheckboxes.length === 0) {
+                alert('No assets selected for deletion.');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to delete the selected assets?')) {
+                return;
+            }
+            
+            // Create form data with selected IDs
+            const formData = new FormData();
+            selectedCheckboxes.forEach(checkbox => {
+                formData.append('selectedIds', checkbox.value);
+            });
+            
+            // Submit the form
+            fetch('@Url.Action("BulkDelete", "Assets")', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Error deleting assets. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting assets. Please try again.');
+            });
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateBulkDeleteButton();
+        });
+        
+        function changePageSize(pageSize) {
+            const url = new URL(window.location);
+            url.searchParams.set('pageSize', pageSize);
+            url.searchParams.set('page', '1'); // Reset to first page when changing page size
+            window.location.href = url.toString();
+        }
+    </script>
+}
+
+<!-- Column Settings Modal -->
+<div class="modal fade" id="columnSettingsModal" tabindex="-1" aria-labelledby="columnSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="columnSettingsModalLabel">
+                    <i class="bi bi-gear"></i> Column Settings
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Role Presets Section -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6><i class="bi bi-person-badge"></i> Quick Role Presets</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="applyRolePreset('procurement')">
+                                <i class="bi bi-cart"></i> Procurement
+                            </button>
+                            <button type="button" class="btn btn-outline-success btn-sm" onclick="applyRolePreset('techs')">
+                                <i class="bi bi-tools"></i> Techs
+                            </button>
+                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="applyRolePreset('security')">
+                                <i class="bi bi-shield"></i> Security
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-sm" onclick="applyRolePreset('clerical')">
+                                <i class="bi bi-file-text"></i> Clerical
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="applyRolePreset('facilities')">
+                                <i class="bi bi-building"></i> Facilities
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Available Columns</h6>
+                        <div id="availableColumns" class="border rounded p-3" style="min-height: 300px;">
+                            <!-- Available columns will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Visible Columns (Drag to reorder)</h6>
+                        <div id="visibleColumns" class="border rounded p-3" style="min-height: 300px;">
+                            <!-- Visible columns will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-primary" onclick="addSelectedColumns()">
+                                <i class="bi bi-arrow-right"></i> Add Selected
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="removeSelectedColumns()">
+                                <i class="bi bi-arrow-left"></i> Remove Selected
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetToDefault()">
+                                <i class="bi bi-arrow-clockwise"></i> Reset to Default
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyColumnSettings()">Apply Settings</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Column settings functionality
+    const defaultColumns = [
+        { id: 'assetTag', name: 'Asset Tag', visible: true, sortable: true },
+        { id: 'serialNumber', name: 'Serial Number', visible: true, sortable: true },
+        { id: 'serviceTag', name: 'Service Tag', visible: false, sortable: true },
+        { id: 'manufacturer', name: 'Manufacturer', visible: true, sortable: true },
+        { id: 'model', name: 'Model', visible: true, sortable: true },
+        { id: 'category', name: 'Category', visible: true, sortable: true },
+        { id: 'netName', name: 'Net Name', visible: false, sortable: true },
+        { id: 'assignedUser', name: 'Assigned User', visible: true, sortable: true },
+        { id: 'assignedUserEmail', name: 'Assigned User Email', visible: false, sortable: true },
+        { id: 'manager', name: 'Manager', visible: false, sortable: true },
+        { id: 'department', name: 'Department', visible: true, sortable: true },
+        { id: 'unit', name: 'Unit', visible: false, sortable: true },
+        { id: 'location', name: 'Location', visible: true, sortable: true },
+        { id: 'floor', name: 'Floor', visible: false, sortable: true },
+        { id: 'desk', name: 'Desk', visible: false, sortable: true },
+        { id: 'status', name: 'Status', visible: true, sortable: true },
+        { id: 'ipAddress', name: 'IP Address', visible: false, sortable: true },
+        { id: 'macAddress', name: 'MAC Address', visible: false, sortable: true },
+        { id: 'wallPort', name: 'Wall Port', visible: false, sortable: true },
+        { id: 'switchName', name: 'Switch Name', visible: false, sortable: true },
+        { id: 'switchPort', name: 'Switch Port', visible: false, sortable: true },
+        { id: 'phoneNumber', name: 'Phone Number', visible: false, sortable: true },
+        { id: 'extension', name: 'Extension', visible: false, sortable: true },
+        { id: 'imei', name: 'IMEI', visible: false, sortable: true },
+        { id: 'cardNumber', name: 'Card Number', visible: false, sortable: true },
+        { id: 'osVersion', name: 'OS Version', visible: false, sortable: true },
+        { id: 'license1', name: 'License1', visible: false, sortable: true },
+        { id: 'license2', name: 'License2', visible: false, sortable: true },
+        { id: 'license3', name: 'License3', visible: false, sortable: true },
+        { id: 'license4', name: 'License4', visible: false, sortable: true },
+        { id: 'license5', name: 'License5', visible: false, sortable: true },
+        { id: 'purchaseOrderNumber', name: 'Purchase Order Number', visible: false, sortable: true },
+        { id: 'vendor', name: 'Vendor', visible: false, sortable: true },
+        { id: 'vendorInvoice', name: 'Vendor Invoice', visible: false, sortable: true },
+        { id: 'purchaseDate', name: 'Purchase Date', visible: false, sortable: true },
+        { id: 'warrantyStart', name: 'Warranty Start', visible: false, sortable: true },
+        { id: 'warrantyEnd', name: 'Warranty End', visible: false, sortable: true },
+        { id: 'notes', name: 'Notes', visible: false, sortable: true },
+        { id: 'createdAt', name: 'Created At', visible: false, sortable: true },
+        { id: 'createdBy', name: 'Created By', visible: false, sortable: true },
+        { id: 'actions', name: 'Actions', visible: true, sortable: false }
+    ];
+
+    let currentColumns = JSON.parse(localStorage.getItem('assetColumns')) || [...defaultColumns];
+
+    // Role-based column presets
+    const rolePresets = {
+        procurement: {
+            name: 'Procurement',
+            columns: ['assetTag', 'serialNumber', 'manufacturer', 'model', 'category', 'purchaseOrderNumber', 'vendor', 'vendorInvoice', 'purchaseDate', 'warrantyStart', 'warrantyEnd', 'status', 'notes', 'actions']
+        },
+        techs: {
+            name: 'Techs',
+            columns: ['assetTag', 'serialNumber', 'serviceTag', 'manufacturer', 'model', 'category', 'netName', 'assignedUser', 'assignedUserEmail', 'department', 'location', 'floor', 'desk', 'status', 'ipAddress', 'macAddress', 'wallPort', 'switchName', 'switchPort', 'osVersion', 'license1', 'license2', 'license3', 'license4', 'license5', 'warrantyEnd', 'notes', 'actions']
+        },
+        security: {
+            name: 'Security',
+            columns: ['assetTag', 'serialNumber', 'manufacturer', 'model', 'category', 'assignedUser', 'assignedUserEmail', 'department', 'location', 'floor', 'desk', 'status', 'phoneNumber', 'extension', 'imei', 'cardNumber', 'notes', 'actions']
+        },
+        clerical: {
+            name: 'Clerical',
+            columns: ['assetTag', 'serialNumber', 'manufacturer', 'model', 'category', 'assignedUser', 'assignedUserEmail', 'manager', 'department', 'unit', 'location', 'status', 'purchaseDate', 'warrantyEnd', 'notes', 'actions']
+        },
+        facilities: {
+            name: 'Facilities',
+            columns: ['assetTag', 'serialNumber', 'manufacturer', 'model', 'category', 'assignedUser', 'department', 'location', 'floor', 'desk', 'status', 'wallPort', 'switchName', 'switchPort', 'purchaseDate', 'warrantyEnd', 'notes', 'actions']
+        }
+    };
+
+    function applyRolePreset(roleKey) {
+        const preset = rolePresets[roleKey];
+        if (!preset) {
+            console.error('Unknown role preset:', roleKey);
+            return;
+        }
+
+        // Reset all columns to not visible
+        currentColumns.forEach(col => {
+            col.visible = false;
+        });
+
+        // Set the specified columns to visible
+        preset.columns.forEach(columnId => {
+            const column = currentColumns.find(col => col.id === columnId);
+            if (column) {
+                column.visible = true;
+            }
+        });
+
+        // Update the UI
+        populateAvailableColumns();
+        populateVisibleColumns();
+
+        // Show confirmation
+        const toast = document.createElement('div');
+        toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed';
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle"></i> Applied ${preset.name} preset
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // Remove toast after it's hidden
+        toast.addEventListener('hidden.bs.toast', () => {
+            document.body.removeChild(toast);
+        });
+    }
+
+    function initializeColumnSettings() {
+        populateAvailableColumns();
+        populateVisibleColumns();
+    }
+
+    function populateAvailableColumns() {
+        const container = document.getElementById('availableColumns');
+        container.innerHTML = '';
+        
+        const availableColumns = currentColumns.filter(col => !col.visible);
+        
+        availableColumns.forEach(column => {
+            const div = document.createElement('div');
+            div.className = 'form-check mb-2';
+            div.innerHTML = `
+                <input class="form-check-input" type="checkbox" value="${column.id}" id="available_${column.id}">
+                <label class="form-check-label" for="available_${column.id}">
+                    ${column.name}
+                </label>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function populateVisibleColumns() {
+        const container = document.getElementById('visibleColumns');
+        container.innerHTML = '';
+        
+        const visibleColumns = currentColumns.filter(col => col.visible);
+        
+        visibleColumns.forEach((column, index) => {
+            const div = document.createElement('div');
+            div.className = 'visible-column-item mb-2 p-2 border rounded';
+            div.draggable = true;
+            div.dataset.columnId = column.id;
+            div.dataset.index = index;
+            div.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="drag-handle me-2" style="cursor: grab;">
+                        <i class="bi bi-grip-vertical text-muted"></i>
+                    </div>
+                    <div class="form-check flex-grow-1">
+                        <input class="form-check-input" type="checkbox" value="${column.id}" id="visible_${column.id}">
+                        <label class="form-check-label" for="visible_${column.id}">
+                            ${column.name}
+                        </label>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary" onclick="moveColumn(${index}, 'up')" ${index === 0 ? 'disabled' : ''}>
+                            <i class="bi bi-arrow-up"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="moveColumn(${index}, 'down')" ${index === visibleColumns.length - 1 ? 'disabled' : ''}>
+                            <i class="bi bi-arrow-down"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Add drag event listeners
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragover', handleDragOver);
+            div.addEventListener('drop', handleDrop);
+            div.addEventListener('dragenter', handleDragEnter);
+            div.addEventListener('dragleave', handleDragLeave);
+            
+            container.appendChild(div);
+        });
+        
+        // Add drop zone event listeners to container
+        container.addEventListener('dragover', handleDragOver);
+        container.addEventListener('drop', handleDrop);
+    }
+
+    function addSelectedColumns() {
+        const checkboxes = document.querySelectorAll('#availableColumns input[type="checkbox"]:checked');
+        checkboxes.forEach(checkbox => {
+            const columnId = checkbox.value;
+            const column = currentColumns.find(col => col.id === columnId);
+            if (column) {
+                column.visible = true;
+            }
+        });
+        populateAvailableColumns();
+        populateVisibleColumns();
+    }
+
+    function removeSelectedColumns() {
+        const checkboxes = document.querySelectorAll('#visibleColumns input[type="checkbox"]:checked');
+        checkboxes.forEach(checkbox => {
+            const columnId = checkbox.value;
+            const column = currentColumns.find(col => col.id === columnId);
+            if (column) {
+                column.visible = false;
+            }
+        });
+        populateAvailableColumns();
+        populateVisibleColumns();
+    }
+
+    function resetToDefault() {
+        currentColumns = [...defaultColumns];
+        populateAvailableColumns();
+        populateVisibleColumns();
+    }
+    
+    // Drag and drop functionality
+    let draggedElement = null;
+    
+    function handleDragStart(e) {
+        draggedElement = e.target.closest('.visible-column-item');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', draggedElement.outerHTML);
+        draggedElement.classList.add('dragging');
+    }
+    
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+    
+    function handleDragEnter(e) {
+        e.preventDefault();
+        const target = e.target.closest('.visible-column-item');
+        if (target && target !== draggedElement) {
+            target.classList.add('drag-over');
+        }
+    }
+    
+    function handleDragLeave(e) {
+        const target = e.target.closest('.visible-column-item');
+        if (target) {
+            target.classList.remove('drag-over');
+        }
+    }
+    
+    function handleDrop(e) {
+        e.preventDefault();
+        const target = e.target.closest('.visible-column-item');
+        
+        if (target && draggedElement && target !== draggedElement) {
+            const fromIndex = parseInt(draggedElement.dataset.index);
+            const toIndex = parseInt(target.dataset.index);
+            
+            // Reorder the visible columns
+            const visibleColumns = currentColumns.filter(col => col.visible);
+            const movedColumn = visibleColumns.splice(fromIndex, 1)[0];
+            visibleColumns.splice(toIndex, 0, movedColumn);
+            
+            // Update currentColumns with new order
+            const hiddenColumns = currentColumns.filter(col => !col.visible);
+            currentColumns = [...visibleColumns, ...hiddenColumns];
+            
+            // Re-render the visible columns
+            populateVisibleColumns();
+        }
+        
+        // Clean up
+        document.querySelectorAll('.visible-column-item').forEach(item => {
+            item.classList.remove('dragging', 'drag-over');
+        });
+        draggedElement = null;
+    }
+    
+    function moveColumn(index, direction) {
+        const visibleColumns = currentColumns.filter(col => col.visible);
+        if (direction === 'up' && index > 0) {
+            [visibleColumns[index], visibleColumns[index - 1]] = [visibleColumns[index - 1], visibleColumns[index]];
+        } else if (direction === 'down' && index < visibleColumns.length - 1) {
+            [visibleColumns[index], visibleColumns[index + 1]] = [visibleColumns[index + 1], visibleColumns[index]];
+        }
+        
+        // Update currentColumns with new order
+        const hiddenColumns = currentColumns.filter(col => !col.visible);
+        currentColumns = [...visibleColumns, ...hiddenColumns];
+        
+        populateVisibleColumns();
+    }
+
+    function applyColumnSettings() {
+        localStorage.setItem('assetColumns', JSON.stringify(currentColumns));
+        renderTable();
+        
+        // Update navigation visibility after applying settings
+        setTimeout(() => {
+            if (window.checkNavigationVisibility) {
+                window.checkNavigationVisibility();
+            }
+        }, 200);
+        
+        // Close the modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('columnSettingsModal'));
+        if (modal) {
+            modal.hide();
+        }
+    }
+
+    // Initialize column settings when modal is shown
+    document.getElementById('columnSettingsModal').addEventListener('show.bs.modal', function () {
+        initializeColumnSettings();
+    });
+
+    // Function to render the table based on column settings
+    function renderTable() {
+        const visibleColumns = currentColumns.filter(col => col.visible);
+        
+        // Get the table and its rows
+        const table = document.querySelector('table');
+        const thead = table.querySelector('thead tr');
+        const tbodyRows = Array.from(table.querySelectorAll('tbody tr'));
+        
+        // Hide all columns first
+        document.querySelectorAll('th, td').forEach(element => {
+            element.style.display = 'none';
+        });
+        
+        // Always show admin checkbox column if it exists
+        const adminCheckboxElements = document.querySelectorAll('th:first-child, td:first-child');
+        adminCheckboxElements.forEach(element => {
+            element.style.display = '';
+        });
+        
+        // Reorder and show visible columns in the correct order
+        visibleColumns.forEach((column, index) => {
+            const columnIndex = index + 1; // +1 because we have the checkbox column at index 0
+            
+            // Get all column elements for this column
+            const headerCell = thead.querySelector(`.column-${column.id}`);
+            const dataCells = tbodyRows.map(row => row.querySelector(`.column-${column.id}`));
+            
+            if (headerCell) {
+                // Show the header
+                headerCell.style.display = '';
+                
+                // Move header to correct position
+                const targetHeaderIndex = columnIndex;
+                if (headerCell.parentNode.children[targetHeaderIndex] !== headerCell) {
+                    thead.insertBefore(headerCell, thead.children[targetHeaderIndex]);
+                }
+            }
+            
+            // Show and reorder data cells
+            dataCells.forEach((cell, rowIndex) => {
+                if (cell) {
+                    cell.style.display = '';
+                    
+                    // Move data cell to correct position
+                    const targetDataIndex = columnIndex;
+                    const row = tbodyRows[rowIndex];
+                    if (row.children[targetDataIndex] !== cell) {
+                        row.insertBefore(cell, row.children[targetDataIndex]);
+                    }
+                }
+            });
+        });
+        
+        // Update navigation visibility after rendering
+        if (window.checkNavigationVisibility) {
+            setTimeout(window.checkNavigationVisibility, 100);
+        }
+    }
+
+    // Initialize table on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        renderTable();
+        initializeTableNavigation();
+    });
+    
+    // Horizontal navigation functionality
+    function initializeTableNavigation() {
+        const navLeft = document.getElementById('navLeftInline');
+        const navRight = document.getElementById('navRightInline');
+        const progressContainer = document.getElementById('scrollProgressContainer');
+        const progressBar = document.getElementById('scrollProgressBar');
+        const tableContainer = document.querySelector('.table-container');
+        
+        if (!navLeft || !navRight || !progressContainer || !progressBar || !tableContainer) return;
+        
+        // Check if navigation should be shown
+        function checkNavigationVisibility() {
+            const visibleColumns = currentColumns.filter(col => col.visible);
+            const shouldShowNav = visibleColumns.length > 10;
+            
+            navLeft.style.display = shouldShowNav ? 'flex' : 'none';
+            navRight.style.display = shouldShowNav ? 'flex' : 'none';
+            progressContainer.style.display = shouldShowNav ? 'block' : 'none';
+            
+            if (shouldShowNav) {
+                updateNavigationState();
+            }
+        }
+        
+        // Update navigation button states and progress bar
+        function updateNavigationState() {
+            const scrollLeft = tableContainer.scrollLeft;
+            const maxScroll = tableContainer.scrollWidth - tableContainer.clientWidth;
+            
+            navLeft.classList.toggle('disabled', scrollLeft <= 0);
+            navRight.classList.toggle('disabled', scrollLeft >= maxScroll);
+            
+            // Update progress bar
+            if (maxScroll > 0) {
+                const progressPercentage = (scrollLeft / maxScroll) * 100;
+                progressBar.style.width = progressPercentage + '%';
+            } else {
+                progressBar.style.width = '0%';
+            }
+        }
+        
+        // Navigation event listeners
+        navLeft.addEventListener('click', function() {
+            if (!navLeft.classList.contains('disabled')) {
+                tableContainer.scrollBy({
+                    left: -200,
+                    behavior: 'smooth'
+                });
+            }
+        });
+        
+        navRight.addEventListener('click', function() {
+            if (!navRight.classList.contains('disabled')) {
+                tableContainer.scrollBy({
+                    left: 200,
+                    behavior: 'smooth'
+                });
+            }
+        });
+        
+        // Update navigation state on scroll
+        tableContainer.addEventListener('scroll', updateNavigationState);
+        
+        // Update navigation state on window resize
+        window.addEventListener('resize', function() {
+            setTimeout(updateNavigationState, 100);
+        });
+        
+        // Initial check
+        checkNavigationVisibility();
+        
+        // Store the function globally so it can be called from renderTable
+        window.checkNavigationVisibility = checkNavigationVisibility;
+    }
+    
+    function exportVisibleColumns() {
+        // Get the visible columns in their current order from the table
+        const visibleColumns = currentColumns.filter(col => col.visible);
+        
+        // Ensure we have the correct order by checking the table headers
+        const tableHeaders = document.querySelectorAll('thead th[class*="column-"]');
+        const orderedColumnIds = [];
+        
+        tableHeaders.forEach(header => {
+            const className = header.className;
+            const columnId = className.match(/column-(\w+)/)?.[1];
+            if (columnId && visibleColumns.some(col => col.id === columnId)) {
+                orderedColumnIds.push(columnId);
+            }
+        });
+        
+        // If we couldn't get the order from the table, fall back to the current order
+        const finalColumnIds = orderedColumnIds.length > 0 ? orderedColumnIds : visibleColumns.map(col => col.id);
+        const columnIds = finalColumnIds.join(',');
+        
+        // Debug logging
+        console.log('Visible columns:', visibleColumns.map(col => ({ id: col.id, name: col.name })));
+        console.log('Table header order:', orderedColumnIds);
+        console.log('Final column IDs being sent:', columnIds);
+        
+        if (columnIds.length === 0) {
+            alert('No columns are visible for export. Please select some columns first.');
+            return;
+        }
+
+        // Get current search term and sort order to maintain filtering
+        const searchTerm = document.querySelector('input[name="searchTerm"]')?.value || '';
+        const currentSort = '@ViewData["CurrentSort"]' || '';
+
+        // Build the export URL with parameters
+        const params = new URLSearchParams({
+            columnIds: columnIds,
+            searchTerm: searchTerm,
+            sortOrder: currentSort
+        });
+
+        // Debug logging
+        console.log('Export URL parameters:', params.toString());
+
+        // Create a temporary link to download the Excel file
+        const exportUrl = '@Url.Action("ExportVisibleColumns", "Assets")?' + params.toString();
+        
+        // Create a temporary anchor element to trigger download
+        const a = document.createElement('a');
+        a.href = exportUrl;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+</script>

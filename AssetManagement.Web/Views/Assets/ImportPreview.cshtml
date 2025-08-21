@@ -1,0 +1,156 @@
+@{
+    ViewData["Title"] = "Import Preview";
+    var previewResult = ViewBag.PreviewResult as AssetManagement.Infrastructure.Services.ImportPreviewResult;
+    var fileName = ViewBag.FileName as string;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="bi bi-eye text-primary"></i> Import Preview - @fileName
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Preview:</strong> Showing first 10 rows of @previewResult?.TotalRows total rows
+                    </div>
+
+                    @if (previewResult?.ErrorMessages?.Any() == true)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Validation Warnings:</strong>
+                            <ul class="mb-0 mt-2">
+                                @foreach (var error in previewResult.ErrorMessages)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Row</th>
+                                    <th>Asset Tag</th>
+                                    <th>Serial Number</th>
+                                    <th>Manufacturer</th>
+                                    <th>Model</th>
+                                    <th>Category</th>
+                                    <th>Assigned User</th>
+                                    <th>Department</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th>Duplicate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (previewResult?.PreviewAssets?.Any() == true)
+                                {
+                                    @foreach (var asset in previewResult.PreviewAssets)
+                                    {
+                                        <tr class="@(asset.IsDuplicate ? "table-warning" : "")">
+                                            <td>@asset.RowNumber</td>
+                                            <td><strong>@asset.AssetTag</strong></td>
+                                            <td>@asset.SerialNumber</td>
+                                            <td>@asset.Manufacturer</td>
+                                            <td>@asset.Model</td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(asset.Category))
+                                                {
+                                                    <span class="badge bg-secondary">@asset.Category</span>
+                                                }
+                                            </td>
+                                            <td>@asset.AssignedUserName</td>
+                                            <td>@asset.Department</td>
+                                            <td>@asset.Location</td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(asset.Status))
+                                                {
+                                                    var statusClass = asset.Status?.ToLower() switch
+                                                    {
+                                                        "active" => "bg-success",
+                                                        "inactive" => "bg-secondary",
+                                                        "maintenance" => "bg-warning",
+                                                        "retired" => "bg-danger",
+                                                        _ => "bg-info"
+                                                    };
+                                                    <span class="badge @statusClass">@asset.Status</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (asset.IsDuplicate)
+                                                {
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="bi bi-exclamation-triangle"></i> Duplicate
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-success">
+                                                        <i class="bi bi-check-circle"></i> New
+                                                    </span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="11" class="text-center text-muted">No preview data available</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Import Summary</h6>
+                                        <ul class="list-unstyled mb-0">
+                                            <li><strong>Total Rows:</strong> @previewResult?.TotalRows</li>
+                                            <li><strong>Previewed:</strong> @previewResult?.PreviewAssets?.Count</li>
+                                            <li><strong>New Assets:</strong> @(previewResult?.PreviewAssets?.Count(a => !a.IsDuplicate) ?? 0)</li>
+                                            <li><strong>Duplicates:</strong> @(previewResult?.PreviewAssets?.Count(a => a.IsDuplicate) ?? 0)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Next Steps</h6>
+                                        <p class="mb-2">Review the data above. If everything looks correct, proceed with the import.</p>
+                                        <div class="d-flex gap-2">
+                                            <form method="post" asp-action="ImportConfirm" style="display: inline;">
+                                                <button type="submit" class="btn btn-success">
+                                                    <i class="bi bi-check-circle"></i> Confirm Import
+                                                </button>
+                                            </form>
+                                            <a asp-action="Import" class="btn btn-secondary">
+                                                <i class="bi bi-arrow-left"></i> Back to Import
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+

@@ -1,0 +1,157 @@
+@{
+    ViewData["Title"] = "Reports";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="bi bi-graph-up text-primary"></i> Asset Management Reports
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-pc-display display-4 text-primary"></i>
+                                    <h5 class="card-title mt-3">Asset Inventory</h5>
+                                    <p class="card-text">Complete inventory of all assets with detailed information.</p>
+                                    <button class="btn btn-primary">
+                                        <i class="bi bi-download"></i> Generate Report
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-calendar-check display-4 text-success"></i>
+                                    <h5 class="card-title mt-3">Warranty Status</h5>
+                                    <p class="card-text">Assets with expiring warranties and maintenance schedules.</p>
+                                    <button class="btn btn-success">
+                                        <i class="bi bi-download"></i> Generate Report
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-people display-4 text-info"></i>
+                                    <h5 class="card-title mt-3">User Assignments</h5>
+                                    <p class="card-text">Assets assigned to users by department and location.</p>
+                                    <button class="btn btn-info">
+                                        <i class="bi bi-download"></i> Generate Report
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-building display-4 text-warning"></i>
+                                    <h5 class="card-title mt-3">Location Report</h5>
+                                    <p class="card-text">Assets by building, floor, and desk location.</p>
+                                    <button class="btn btn-warning">
+                                        <i class="bi bi-download"></i> Generate Report
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-currency-dollar display-4 text-danger"></i>
+                                    <h5 class="card-title mt-3">Financial Summary</h5>
+                                    <p class="card-text">Asset values, depreciation, and purchase history.</p>
+                                    <button class="btn btn-danger">
+                                        <i class="bi bi-download"></i> Generate Report
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-exclamation-triangle display-4 text-secondary"></i>
+                                    <h5 class="card-title mt-3">Maintenance Alerts</h5>
+                                    <p class="card-text">Assets requiring maintenance or replacement.</p>
+                                    <button class="btn btn-secondary">
+                                        <i class="bi bi-download"></i> Generate Report
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <h5>Quick Statistics</h5>
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-primary text-white">
+                                        <div class="card-body text-center">
+                                            <h3 class="card-title">0</h3>
+                                            <p class="card-text">Total Assets</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-success text-white">
+                                        <div class="card-body text-center">
+                                            <h3 class="card-title">0</h3>
+                                            <p class="card-text">Active Assets</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-warning text-white">
+                                        <div class="card-body text-center">
+                                            <h3 class="card-title">0</h3>
+                                            <p class="card-text">In Maintenance</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-danger text-white">
+                                        <div class="card-body text-center">
+                                            <h3 class="card-title">0</h3>
+                                            <p class="card-text">Retired Assets</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5>Export Options</h5>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary">
+                                    <i class="bi bi-file-earmark-excel"></i> Excel
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary">
+                                    <i class="bi bi-file-earmark-text"></i> CSV
+                                </button>
+                                <button type="button" class="btn btn-outline-danger">
+                                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

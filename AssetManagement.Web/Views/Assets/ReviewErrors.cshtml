@@ -1,0 +1,864 @@
+@model List<AssetManagement.Infrastructure.Services.ImportError>
+@{
+    ViewData["Title"] = "Review Import Errors";
+}
+
+<div class="container-fluid">
+    @Html.AntiForgeryToken()
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-exclamation-triangle text-warning"></i> Review Import Errors</h2>
+        <div>
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Assets
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        <strong>Instructions:</strong> 
+        <ul class="mb-0">
+            <li>Review and correct the data in the table below - <strong>errors are highlighted in red</strong></li>
+            <li>Use the scroll arrows or drag to navigate through all columns</li>
+            <li>Error details are shown in the rightmost columns (Row Number and Error Message)</li>
+            <li>Use "Re-Enter Duplicates" to automatically randomize duplicate Asset Tags</li>
+            <li>Click "Download Corrected Data" to get an Excel file (with or without error columns based on checkbox)</li>
+        </ul>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-warning text-dark">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Import Errors (@Model.Count records)
+                </h5>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="showErrorColumns" checked onchange="toggleErrorColumns()">
+                        <label class="form-check-label text-dark" for="showErrorColumns">
+                            Show Error Columns
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includeErrorColumns" checked>
+                        <label class="form-check-label text-dark" for="includeErrorColumns">
+                            Include in Download
+                        </label>
+                    </div>
+                                         <button type="button" class="btn btn-warning" onclick="reEnterDuplicates()">
+                         <i class="bi bi-arrow-clockwise"></i> Re-Enter Duplicates
+                     </button>
+                     <button type="button" class="btn btn-danger" onclick="randomizeAllDuplicates()">
+                         <i class="bi bi-shuffle"></i> Randomize All Duplicates
+                     </button>
+                     <button type="button" class="btn btn-dark" onclick="forceRandomizeAllDuplicates()">
+                         <i class="bi bi-arrow-repeat"></i> Force Randomize All
+                     </button>
+                     <button type="button" class="btn btn-warning" onclick="randomizeAllFlaggedRecords()">
+                         <i class="bi bi-shuffle"></i> Randomize All Flagged Records
+                     </button>
+                     <button type="button" class="btn btn-info" onclick="debugAssetTags()">
+                         <i class="bi bi-bug"></i> Debug Asset Tags
+                     </button>
+                     <button type="button" class="btn btn-secondary" onclick="checkCurrentState()">
+                         <i class="bi bi-eye"></i> Check Current State
+                     </button>
+                     <button type="button" class="btn btn-primary" onclick="showAllDuplicates()">
+                         <i class="bi bi-list-ul"></i> Show All Duplicates
+                     </button>
+                    <button type="button" class="btn btn-success" onclick="downloadCorrectedData()">
+                        <i class="bi bi-download"></i> Download Corrected Data
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Error Summary -->
+            <div class="alert alert-danger mb-3">
+                <h6><i class="bi bi-exclamation-triangle"></i> Error Summary:</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Total Errors:</strong> @Model.Count
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Common Issues:</strong>
+                        @{
+                            var errorTypes = Model.GroupBy(e => e.ErrorMessage).OrderByDescending(g => g.Count()).Take(3);
+                        }
+                        @foreach (var errorType in errorTypes)
+                        {
+                            <span class="badge bg-danger me-1">@errorType.Key (@errorType.Count())</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Navigation -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="scrollTable('left')">
+                        <i class="bi bi-arrow-left"></i> Previous Columns
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="scrollTable('right')">
+                        Next Columns <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+                <div class="text-muted">
+                    <small>Use scroll arrows or drag to navigate through all columns</small>
+                </div>
+            </div>
+
+            <div class="table-responsive" id="tableContainer">
+                <table class="table table-striped table-hover" id="errorTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="sticky-col">Asset Tag</th>
+                            <th>Serial Number</th>
+                            <th>Service Tag</th>
+                            <th>Manufacturer</th>
+                            <th>Model</th>
+                            <th>Category</th>
+                            <th>Net Name</th>
+                            <th>Assigned User Name</th>
+                            <th>Assigned User Email</th>
+                            <th>Manager</th>
+                            <th>Department</th>
+                            <th>Unit</th>
+                            <th>Location</th>
+                            <th>Floor</th>
+                            <th>Desk</th>
+                            <th>Status</th>
+                            <th>IP Address</th>
+                            <th>MAC Address</th>
+                            <th>Wall Port</th>
+                            <th>Switch Name</th>
+                            <th>Switch Port</th>
+                            <th>Phone Number</th>
+                            <th>Extension</th>
+                            <th>IMEI</th>
+                            <th>Card Number</th>
+                            <th>OS Version</th>
+                            <th>License1</th>
+                            <th>License2</th>
+                            <th>License3</th>
+                            <th>License4</th>
+                            <th>License5</th>
+                            <th>Purchase Price</th>
+                            <th>Order Number</th>
+                            <th>Vendor</th>
+                            <th>Vendor Invoice</th>
+                            <th>Purchase Date</th>
+                            <th>Warranty Start</th>
+                            <th>Warranty End Date</th>
+                            <th>Notes</th>
+                            <th class="text-danger error-col">Row Number</th>
+                            <th class="text-danger error-col">Error Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Count; i++)
+                        {
+                            var error = Model[i];
+                            <tr data-row-index="@i" class="@(i % 2 == 0 ? "table-row-even" : "table-row-odd")">
+                                <td class="sticky-col">
+                                    <input type="text" class="form-control form-control-sm @(string.IsNullOrEmpty(error.RowData.ContainsKey("Asset Tag") ? error.RowData["Asset Tag"]?.ToString() : "") ? "border-danger" : "")" 
+                                           value="@(error.RowData.ContainsKey("Asset Tag") ? error.RowData["Asset Tag"]?.ToString() : "")" 
+                                           data-field="Asset Tag"
+                                           title="@(string.IsNullOrEmpty(error.RowData.ContainsKey("Asset Tag") ? error.RowData["Asset Tag"]?.ToString() : "") ? "Asset Tag is required" : "")">
+                                </td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Serial Number") ? error.RowData["Serial Number"]?.ToString() : "")" data-field="Serial Number"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Service Tag") ? error.RowData["Service Tag"]?.ToString() : "")" data-field="Service Tag"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Manufacturer") ? error.RowData["Manufacturer"]?.ToString() : "")" data-field="Manufacturer"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Model") ? error.RowData["Model"]?.ToString() : "")" data-field="Model"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Category") ? error.RowData["Category"]?.ToString() : "")" data-field="Category"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Net Name") ? error.RowData["Net Name"]?.ToString() : "")" data-field="Net Name"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Assigned User Name") ? error.RowData["Assigned User Name"]?.ToString() : "")" data-field="Assigned User Name"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Assigned User Email") ? error.RowData["Assigned User Email"]?.ToString() : "")" data-field="Assigned User Email"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Manager") ? error.RowData["Manager"]?.ToString() : "")" data-field="Manager"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Department") ? error.RowData["Department"]?.ToString() : "")" data-field="Department"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Unit") ? error.RowData["Unit"]?.ToString() : "")" data-field="Unit"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Location") ? error.RowData["Location"]?.ToString() : "")" data-field="Location"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Floor") ? error.RowData["Floor"]?.ToString() : "")" data-field="Floor"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Desk") ? error.RowData["Desk"]?.ToString() : "")" data-field="Desk"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Status") ? error.RowData["Status"]?.ToString() : "")" data-field="Status"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("IP Address") ? error.RowData["IP Address"]?.ToString() : "")" data-field="IP Address"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("MAC Address") ? error.RowData["MAC Address"]?.ToString() : "")" data-field="MAC Address"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Wall Port") ? error.RowData["Wall Port"]?.ToString() : "")" data-field="Wall Port"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Switch Name") ? error.RowData["Switch Name"]?.ToString() : "")" data-field="Switch Name"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Switch Port") ? error.RowData["Switch Port"]?.ToString() : "")" data-field="Switch Port"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Phone Number") ? error.RowData["Phone Number"]?.ToString() : "")" data-field="Phone Number"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Extension") ? error.RowData["Extension"]?.ToString() : "")" data-field="Extension"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("IMEI") ? error.RowData["IMEI"]?.ToString() : "")" data-field="IMEI"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Card Number") ? error.RowData["Card Number"]?.ToString() : "")" data-field="Card Number"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("OS Version") ? error.RowData["OS Version"]?.ToString() : "")" data-field="OS Version"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("License1") ? error.RowData["License1"]?.ToString() : "")" data-field="License1"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("License2") ? error.RowData["License2"]?.ToString() : "")" data-field="License2"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("License3") ? error.RowData["License3"]?.ToString() : "")" data-field="License3"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("License4") ? error.RowData["License4"]?.ToString() : "")" data-field="License4"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("License5") ? error.RowData["License5"]?.ToString() : "")" data-field="License5"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Purchase Price") ? error.RowData["Purchase Price"]?.ToString() : "")" data-field="Purchase Price"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Order Number") ? error.RowData["Order Number"]?.ToString() : "")" data-field="Order Number"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Vendor") ? error.RowData["Vendor"]?.ToString() : "")" data-field="Vendor"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Vendor Invoice") ? error.RowData["Vendor Invoice"]?.ToString() : "")" data-field="Vendor Invoice"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Purchase Date") ? error.RowData["Purchase Date"]?.ToString() : "")" data-field="Purchase Date"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Warranty Start") ? error.RowData["Warranty Start"]?.ToString() : "")" data-field="Warranty Start"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Warranty End Date") ? error.RowData["Warranty End Date"]?.ToString() : "")" data-field="Warranty End Date"></td>
+                                <td><input type="text" class="form-control form-control-sm" value="@(error.RowData.ContainsKey("Notes") ? error.RowData["Notes"]?.ToString() : "")" data-field="Notes"></td>
+                                <td class="text-danger fw-bold error-col bg-danger bg-opacity-10">@error.RowNumber</td>
+                                <td class="text-danger fw-bold error-col bg-danger bg-opacity-10" title="@error.ErrorMessage">@(error.ErrorMessage.Length > 50 ? error.ErrorMessage.Substring(0, 50) + "..." : error.ErrorMessage)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleErrorColumns() {
+        const showErrorColumns = document.getElementById('showErrorColumns').checked;
+        const errorColumns = document.querySelectorAll('.error-col');
+        
+        errorColumns.forEach(col => {
+            col.style.display = showErrorColumns ? '' : 'none';
+        });
+    }
+    
+    function scrollTable(direction) {
+        const container = document.getElementById('tableContainer');
+        const scrollAmount = 300; // pixels to scroll
+        
+        if (direction === 'left') {
+            container.scrollLeft -= scrollAmount;
+        } else {
+            container.scrollLeft += scrollAmount;
+        }
+    }
+    
+    function downloadCorrectedData() {
+        // Collect all the corrected data from the table
+        const correctedErrors = [];
+        const rows = document.querySelectorAll('#errorTable tbody tr');
+        
+        rows.forEach((row, index) => {
+            const rowData = {};
+            const inputs = row.querySelectorAll('input[data-field]');
+            
+            inputs.forEach(input => {
+                rowData[input.getAttribute('data-field')] = input.value;
+            });
+            
+            // Get the original error data from the model
+            const originalError = @Html.Raw(Json.Serialize(Model));
+            const originalRow = originalError[index];
+            
+            correctedErrors.push({
+                rowNumber: originalRow.rowNumber,
+                assetTag: originalRow.assetTag,
+                serialNumber: originalRow.serialNumber,
+                errorMessage: originalRow.errorMessage,
+                rowData: rowData
+            });
+        });
+        
+        // Get the include error columns preference
+        const includeErrorColumns = document.getElementById('includeErrorColumns').checked;
+        
+        // Send the corrected data to the server
+        fetch(`@Url.Action("DownloadCorrectedErrors", "Assets")?includeErrorColumns=${includeErrorColumns}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+            },
+            body: JSON.stringify(correctedErrors)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            }
+            throw new Error('Network response was not ok.');
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Corrected_Import_Data_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error downloading corrected data. Please try again.');
+        });
+    }
+    
+    function reEnterDuplicates() {
+        // Find rows with duplicate Asset Tags and randomize them
+        const assetTagInputs = document.querySelectorAll('input[data-field="Asset Tag"]');
+        console.log(`Found ${assetTagInputs.length} Asset Tag inputs`);
+        
+        const assetTagValues = new Map(); // Map to track duplicates
+        
+        // First pass: collect all Asset Tag values and their occurrences
+        assetTagInputs.forEach((input, index) => {
+            const value = input.value.trim();
+            console.log(`Row ${index}: Asset Tag = "${value}"`);
+            // Include all values, including empty strings, 'None', '0', etc.
+            if (!assetTagValues.has(value)) {
+                assetTagValues.set(value, []);
+            }
+            assetTagValues.get(value).push(index);
+        });
+        
+        // Find duplicates
+        const duplicates = [];
+        let totalRecordsToRandomize = 0;
+        console.log('=== DUPLICATE ANALYSIS ===');
+        assetTagValues.forEach((indices, value) => {
+            console.log(`Asset Tag "${value}": appears ${indices.length} times at rows: ${indices.join(', ')}`);
+            if (indices.length > 1) {
+                duplicates.push({ value, indices });
+                totalRecordsToRandomize += indices.length - 1; // Subtract 1 to keep first occurrence
+                console.log(`*** DUPLICATE FOUND: "${value}" appears ${indices.length} times at rows: ${indices.join(', ')}`);
+            }
+        });
+        console.log(`Total duplicates found: ${duplicates.length} groups, ${totalRecordsToRandomize} records to randomize`);
+        console.log('=== END ANALYSIS ===');
+        
+        if (duplicates.length === 0) {
+            alert('No duplicate Asset Tags found.');
+            return;
+        }
+        
+        const confirmed = confirm(`Found ${duplicates.length} duplicate Asset Tag groups affecting ${totalRecordsToRandomize} records. Do you want to randomize them? This will add "Re-Enter-" prefix and a random number.`);
+        
+        if (!confirmed) {
+            return;
+        }
+        
+        let randomizedCount = 0;
+        
+        // Randomize duplicates
+        console.log('=== RANDOMIZATION PROCESS ===');
+        duplicates.forEach(duplicate => {
+            console.log(`Processing duplicate group: "${duplicate.value}" at rows: ${duplicate.indices.join(', ')}`);
+            duplicate.indices.forEach((index, position) => {
+                if (position > 0) { // Keep the first occurrence, randomize the rest
+                    const randomNumber = Math.floor(Math.random() * 900000) + 100000; // 6-digit random number
+                    const newValue = `Re-Enter-${randomNumber}`;
+                    console.log(`Randomizing row ${index} (position ${position}): "${duplicate.value}" → "${newValue}"`);
+                    assetTagInputs[index].value = newValue;
+                    randomizedCount++;
+                    
+                                         // Update the input styling
+                     assetTagInputs[index].classList.remove('border-danger');
+                     assetTagInputs[index].classList.add('border-success');
+                     assetTagInputs[index].title = 'Randomized duplicate Asset Tag';
+                     
+                     // Force a visual update
+                     assetTagInputs[index].style.borderColor = '#198754';
+                     assetTagInputs[index].style.boxShadow = '0 0 0 0.2rem rgba(25, 135, 84, 0.25)';
+                     
+                     console.log(`Applied styling to row ${index}: classList = [${assetTagInputs[index].classList.toString()}], has border-success = ${assetTagInputs[index].classList.contains('border-success')}`);
+                } else {
+                    console.log(`Keeping row ${index} (position ${position}): "${duplicate.value}" unchanged`);
+                }
+            });
+        });
+                 console.log('=== END RANDOMIZATION ===');
+         
+         // Visual confirmation - highlight the randomized fields
+         const randomizedInputs = document.querySelectorAll('input[data-field="Asset Tag"].border-success');
+         console.log(`Found ${randomizedInputs.length} randomized inputs with green borders`);
+         
+         // Scroll to the first randomized field to show the user
+         if (randomizedInputs.length > 0) {
+             randomizedInputs[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+             randomizedInputs[0].focus();
+         }
+         
+         alert(`Successfully randomized ${randomizedCount} duplicate Asset Tag records.\n\nLook for the green-bordered fields in the table - these have been randomized and are ready for import!`);
+    }
+    
+    function debugAssetTags() {
+        const assetTagInputs = document.querySelectorAll('input[data-field="Asset Tag"]');
+        console.log('=== DEBUG ASSET TAGS ===');
+        console.log(`Total Asset Tag inputs found: ${assetTagInputs.length}`);
+        
+        const valueCounts = new Map();
+        
+        assetTagInputs.forEach((input, index) => {
+            const value = input.value;
+            const trimmedValue = value.trim();
+            const length = value.length;
+            const charCodes = Array.from(value).map(c => c.charCodeAt(0));
+            
+            console.log(`Row ${index}:`);
+            console.log(`  Raw value: "${value}" (length: ${length})`);
+            console.log(`  Trimmed: "${trimmedValue}" (length: ${trimmedValue.length})`);
+            console.log(`  Char codes: [${charCodes.join(', ')}]`);
+            console.log(`  Is empty: ${value === ''}`);
+            console.log(`  Is null/undefined: ${value === null || value === undefined}`);
+            console.log('  ---');
+            
+            // Count occurrences
+            if (!valueCounts.has(trimmedValue)) {
+                valueCounts.set(trimmedValue, []);
+            }
+            valueCounts.get(trimmedValue).push(index);
+        });
+        
+        console.log('=== VALUE COUNTS ===');
+        valueCounts.forEach((indices, value) => {
+            console.log(`"${value}": ${indices.length} times at rows: [${indices.join(', ')}]`);
+        });
+        
+        console.log('=== DUPLICATES ONLY ===');
+        valueCounts.forEach((indices, value) => {
+            if (indices.length > 1) {
+                console.log(`DUPLICATE: "${value}" appears ${indices.length} times at rows: [${indices.join(', ')}]`);
+            }
+        });
+                 console.log('=== END DEBUG ===');
+     }
+     
+     function checkCurrentState() {
+         const assetTagInputs = document.querySelectorAll('input[data-field="Asset Tag"]');
+         console.log('=== CURRENT STATE CHECK ===');
+         console.log(`Total Asset Tag inputs: ${assetTagInputs.length}`);
+         
+         let randomizedCount = 0;
+         let duplicateCount = 0;
+         const currentValues = new Map();
+         
+                   assetTagInputs.forEach((input, index) => {
+              const value = input.value.trim();
+              const hasGreenBorder = input.classList.contains('border-success') || input.style.borderColor === 'rgb(25, 135, 84)';
+              const hasRedBorder = input.classList.contains('border-danger');
+              
+              if (hasGreenBorder) {
+                  randomizedCount++;
+                  console.log(`Row ${index}: "${value}" - RANDOMIZED (green border) - classList: [${input.classList.toString()}], borderColor: ${input.style.borderColor}`);
+              } else if (hasRedBorder) {
+                  console.log(`Row ${index}: "${value}" - HAS ERROR (red border)`);
+              } else {
+                  console.log(`Row ${index}: "${value}" - NORMAL`);
+              }
+             
+             // Count duplicates
+             if (!currentValues.has(value)) {
+                 currentValues.set(value, []);
+             }
+             currentValues.get(value).push(index);
+         });
+         
+         console.log(`\n=== SUMMARY ===`);
+         console.log(`Randomized fields: ${randomizedCount}`);
+         console.log(`Fields with errors: ${document.querySelectorAll('input[data-field="Asset Tag"].border-danger').length}`);
+         
+         // Check for remaining duplicates
+         currentValues.forEach((indices, value) => {
+             if (indices.length > 1) {
+                 duplicateCount++;
+                 console.log(`REMAINING DUPLICATE: "${value}" appears ${indices.length} times at rows: [${indices.join(', ')}]`);
+             }
+         });
+         
+         console.log(`Remaining duplicates: ${duplicateCount}`);
+         console.log('=== END CURRENT STATE ===');
+         
+         alert(`Current State:\n- Randomized fields: ${randomizedCount}\n- Fields with errors: ${document.querySelectorAll('input[data-field="Asset Tag"].border-danger').length}\n- Remaining duplicates: ${duplicateCount}\n\nCheck console for details.`);
+     }
+     
+     function showAllDuplicates() {
+         // Get the original error data from the model
+         const originalError = @Html.Raw(Json.Serialize(Model));
+         console.log('=== ALL ORIGINAL DUPLICATES ===');
+         
+         // Group by Asset Tag to find all duplicates
+         const assetTagGroups = new Map();
+         
+         originalError.forEach((error, index) => {
+             const assetTag = error.rowData['Asset Tag'] || '';
+             if (!assetTagGroups.has(assetTag)) {
+                 assetTagGroups.set(assetTag, []);
+             }
+             assetTagGroups.get(assetTag).push({
+                 rowNumber: error.rowNumber,
+                 tableIndex: index,
+                 assetTag: assetTag,
+                 errorMessage: error.errorMessage
+             });
+         });
+         
+         let totalDuplicateGroups = 0;
+         let totalDuplicateRecords = 0;
+         
+         console.log('=== DUPLICATE ANALYSIS FROM ORIGINAL DATA ===');
+         assetTagGroups.forEach((records, assetTag) => {
+             if (records.length > 1) {
+                 totalDuplicateGroups++;
+                 totalDuplicateRecords += records.length;
+                 
+                 console.log(`\nDUPLICATE GROUP: "${assetTag}" (${records.length} records)`);
+                 records.forEach(record => {
+                     console.log(`  Row ${record.tableIndex} (Original Row ${record.rowNumber}): "${record.assetTag}" - ${record.errorMessage}`);
+                 });
+             }
+         });
+         
+         console.log(`\n=== SUMMARY ===`);
+         console.log(`Total duplicate groups: ${totalDuplicateGroups}`);
+         console.log(`Total duplicate records: ${totalDuplicateRecords}`);
+         console.log('=== END ALL DUPLICATES ===');
+         
+         // Show current state vs original state
+         const currentAssetTags = new Map();
+         document.querySelectorAll('input[data-field="Asset Tag"]').forEach((input, index) => {
+             const value = input.value.trim();
+             if (!currentAssetTags.has(value)) {
+                 currentAssetTags.set(value, []);
+             }
+             currentAssetTags.get(value).push(index);
+         });
+         
+         let currentDuplicates = 0;
+         currentAssetTags.forEach((indices, value) => {
+             if (indices.length > 1) {
+                 currentDuplicates++;
+             }
+         });
+         
+         alert(`Original Duplicates:\n- ${totalDuplicateGroups} groups\n- ${totalDuplicateRecords} records\n\nCurrent Duplicates:\n- ${currentDuplicates} groups\n\nCheck console for detailed breakdown of all original duplicates.`);
+     }
+     
+     function randomizeAllDuplicates() {
+         // Get the original error data from the model
+         const originalError = @Html.Raw(Json.Serialize(Model));
+         console.log('=== RANDOMIZE ALL DUPLICATES ===');
+         
+         // Group by Asset Tag to find all duplicates
+         const assetTagGroups = new Map();
+         
+         originalError.forEach((error, index) => {
+             const assetTag = error.rowData['Asset Tag'] || '';
+             if (!assetTagGroups.has(assetTag)) {
+                 assetTagGroups.set(assetTag, []);
+             }
+             assetTagGroups.get(assetTag).push({
+                 rowNumber: error.rowNumber,
+                 tableIndex: index,
+                 assetTag: assetTag,
+                 errorMessage: error.errorMessage
+             });
+         });
+         
+         // Find all duplicate groups
+         const duplicateGroups = [];
+         let totalRecordsToRandomize = 0;
+         
+         assetTagGroups.forEach((records, assetTag) => {
+             if (records.length > 1) {
+                 duplicateGroups.push({
+                     assetTag: assetTag,
+                     records: records
+                 });
+                 totalRecordsToRandomize += records.length - 1; // Keep first, randomize rest
+             }
+         });
+         
+         console.log(`Found ${duplicateGroups.length} duplicate groups affecting ${totalRecordsToRandomize} records`);
+         
+         if (duplicateGroups.length === 0) {
+             alert('No duplicate groups found in the original data.');
+             return;
+         }
+         
+         const confirmed = confirm(`Found ${duplicateGroups.length} duplicate Asset Tag groups affecting ${totalRecordsToRandomize} records.\n\nThis will randomize ALL duplicates from the original import data. Continue?`);
+         
+         if (!confirmed) {
+             return;
+         }
+         
+         let randomizedCount = 0;
+         const assetTagInputs = document.querySelectorAll('input[data-field="Asset Tag"]');
+         
+         console.log('=== RANDOMIZATION PROCESS ===');
+         duplicateGroups.forEach(group => {
+             console.log(`Processing duplicate group: "${group.assetTag}" (${group.records.length} records)`);
+             
+             // Keep the first record, randomize the rest
+             group.records.forEach((record, position) => {
+                 if (position > 0) { // Skip first record, randomize the rest
+                     const randomNumber = Math.floor(Math.random() * 900000) + 100000;
+                     const newValue = `Re-Enter-${randomNumber}`;
+                     
+                     console.log(`Randomizing row ${record.tableIndex} (Original Row ${record.rowNumber}): "${group.assetTag}" → "${newValue}"`);
+                     
+                     // Update the input value
+                     assetTagInputs[record.tableIndex].value = newValue;
+                     
+                     // Update styling
+                     assetTagInputs[record.tableIndex].classList.remove('border-danger');
+                     assetTagInputs[record.tableIndex].classList.add('border-success');
+                     assetTagInputs[record.tableIndex].title = 'Randomized duplicate Asset Tag';
+                     
+                     // Force visual update
+                     assetTagInputs[record.tableIndex].style.borderColor = '#198754';
+                     assetTagInputs[record.tableIndex].style.boxShadow = '0 0 0 0.2rem rgba(25, 135, 84, 0.25)';
+                     
+                     randomizedCount++;
+                 } else {
+                     console.log(`Keeping row ${record.tableIndex} (Original Row ${record.rowNumber}): "${group.assetTag}" unchanged`);
+                 }
+             });
+         });
+         
+         console.log(`=== END RANDOMIZATION ===`);
+         console.log(`Successfully randomized ${randomizedCount} records`);
+         
+         // Visual confirmation
+         const randomizedInputs = document.querySelectorAll('input[data-field="Asset Tag"].border-success');
+         console.log(`Found ${randomizedInputs.length} randomized inputs with green borders`);
+         
+         if (randomizedInputs.length > 0) {
+             randomizedInputs[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+             randomizedInputs[0].focus();
+         }
+         
+         alert(`Successfully randomized ${randomizedCount} duplicate Asset Tag records!\n\nAll duplicates from the original import data have been resolved.\n\nLook for the green-bordered fields in the table - these are ready for import!`);
+     }
+     
+     function forceRandomizeAllDuplicates() {
+         // Get the original error data from the model
+         const originalError = @Html.Raw(Json.Serialize(Model));
+         console.log('=== FORCE RANDOMIZE ALL DUPLICATES ===');
+         
+         // Group by Asset Tag to find all duplicates from original data
+         const assetTagGroups = new Map();
+         
+         originalError.forEach((error, index) => {
+             const assetTag = error.rowData['Asset Tag'] || '';
+             if (!assetTagGroups.has(assetTag)) {
+                 assetTagGroups.set(assetTag, []);
+             }
+             assetTagGroups.get(assetTag).push({
+                 rowNumber: error.rowNumber,
+                 tableIndex: index,
+                 assetTag: assetTag,
+                 errorMessage: error.errorMessage
+             });
+         });
+         
+         // Find all duplicate groups from original data
+         const duplicateGroups = [];
+         let totalRecordsToRandomize = 0;
+         
+         assetTagGroups.forEach((records, assetTag) => {
+             if (records.length > 1) {
+                 duplicateGroups.push({
+                     assetTag: assetTag,
+                     records: records
+                 });
+                 totalRecordsToRandomize += records.length - 1; // Keep first, randomize rest
+             }
+         });
+         
+         console.log(`Found ${duplicateGroups.length} original duplicate groups affecting ${totalRecordsToRandomize} records`);
+         
+         if (duplicateGroups.length === 0) {
+             alert('No duplicate groups found in the original data.');
+             return;
+         }
+         
+         const confirmed = confirm(`Found ${duplicateGroups.length} original duplicate Asset Tag groups affecting ${totalRecordsToRandomize} records.\n\nThis will FORCE randomize ALL duplicates from the original import data, regardless of their current state. Continue?`);
+         
+         if (!confirmed) {
+             return;
+         }
+         
+         let randomizedCount = 0;
+         const assetTagInputs = document.querySelectorAll('input[data-field="Asset Tag"]');
+         
+         console.log('=== FORCE RANDOMIZATION PROCESS ===');
+         duplicateGroups.forEach(group => {
+             console.log(`Processing duplicate group: "${group.assetTag}" (${group.records.length} records)`);
+             
+             // Keep the first record, randomize the rest (regardless of current value)
+             group.records.forEach((record, position) => {
+                 if (position > 0) { // Skip first record, randomize the rest
+                     const randomNumber = Math.floor(Math.random() * 900000) + 100000;
+                     const newValue = `Re-Enter-${randomNumber}`;
+                     const currentValue = assetTagInputs[record.tableIndex].value;
+                     
+                     console.log(`Force randomizing row ${record.tableIndex} (Original Row ${record.rowNumber}): "${currentValue}" → "${newValue}"`);
+                     
+                     // Update the input value
+                     assetTagInputs[record.tableIndex].value = newValue;
+                     
+                     // Update styling
+                     assetTagInputs[record.tableIndex].classList.remove('border-danger');
+                     assetTagInputs[record.tableIndex].classList.add('border-success');
+                     assetTagInputs[record.tableIndex].title = 'Randomized duplicate Asset Tag';
+                     
+                     // Force visual update
+                     assetTagInputs[record.tableIndex].style.borderColor = '#198754';
+                     assetTagInputs[record.tableIndex].style.boxShadow = '0 0 0 0.2rem rgba(25, 135, 84, 0.25)';
+                     
+                     randomizedCount++;
+                 } else {
+                     console.log(`Keeping row ${record.tableIndex} (Original Row ${record.rowNumber}): "${group.assetTag}" unchanged`);
+                 }
+             });
+         });
+         
+         console.log(`=== END FORCE RANDOMIZATION ===`);
+         console.log(`Successfully force randomized ${randomizedCount} records`);
+         
+         // Visual confirmation
+         const randomizedInputs = document.querySelectorAll('input[data-field="Asset Tag"].border-success');
+         console.log(`Found ${randomizedInputs.length} randomized inputs with green borders`);
+         
+         if (randomizedInputs.length > 0) {
+             randomizedInputs[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+             randomizedInputs[0].focus();
+         }
+         
+         alert(`Successfully force randomized ${randomizedCount} duplicate Asset Tag records!\n\nAll duplicates from the original import data have been resolved.\n\nLook for the green-bordered fields in the table - these are ready for import!`);
+     }
+     
+     function randomizeAllFlaggedRecords() {
+         const assetTagInputs = document.querySelectorAll('input[data-field="Asset Tag"]');
+         console.log(`Randomizing ALL ${assetTagInputs.length} flagged records`);
+         
+         const confirmed = confirm(`This will randomize ALL ${assetTagInputs.length} flagged records with "Re-Enter-" prefix and random numbers. Continue?`);
+         
+         if (!confirmed) {
+             return;
+         }
+         
+         let randomizedCount = 0;
+         
+         assetTagInputs.forEach((input, index) => {
+             const randomNumber = Math.floor(Math.random() * 900000) + 100000;
+             const newValue = `Re-Enter-${randomNumber}`;
+             
+             console.log(`Randomizing row ${index}: "${input.value}" → "${newValue}"`);
+             
+             // Update the input value
+             input.value = newValue;
+             
+             // Update styling
+             input.classList.remove('border-danger');
+             input.classList.add('border-success');
+             input.title = 'Randomized Asset Tag';
+             
+             // Force visual update
+             input.style.borderColor = '#198754';
+             input.style.boxShadow = '0 0 0 0.2rem rgba(25, 135, 84, 0.25)';
+             
+             randomizedCount++;
+         });
+         
+         console.log(`Successfully randomized ${randomizedCount} records`);
+         
+         // Scroll to the first field to show the user
+         if (assetTagInputs.length > 0) {
+             assetTagInputs[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+             assetTagInputs[0].focus();
+         }
+         
+         alert(`Successfully randomized ALL ${randomizedCount} flagged records!\n\nAll Asset Tags now have unique "Re-Enter-XXXXXX" values and are ready for import!`);
+     }
+</script>
+
+<style>
+    .table-responsive {
+        max-height: 60vh;
+        overflow-y: auto;
+        overflow-x: auto;
+        border: 1px solid #dee2e6;
+    }
+    
+    .form-control-sm {
+        font-size: 0.875rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .table th {
+        position: sticky;
+        top: 0;
+        background-color: #212529;
+        z-index: 1;
+        white-space: nowrap;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background-color: inherit;
+        z-index: 2;
+        border-right: 2px solid #dee2e6;
+    }
+    
+    .error-col {
+        background-color: #f8d7da !important;
+        border-left: 2px solid #dc3545;
+    }
+    
+    .text-danger {
+        background-color: #f8d7da;
+    }
+    
+    .border-danger {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+    
+    .border-success {
+        border-color: #198754 !important;
+        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+    }
+    
+    .table-row-even {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .table-row-odd {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Custom scrollbar */
+    .table-responsive::-webkit-scrollbar {
+        height: 12px;
+        width: 12px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 6px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 6px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
+    /* Tooltip for truncated error messages */
+    .error-col[title] {
+        cursor: help;
+    }
+</style>

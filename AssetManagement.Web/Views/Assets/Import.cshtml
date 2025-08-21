@@ -1,0 +1,110 @@
+@{
+    ViewData["Title"] = "Import Assets";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="bi bi-upload text-primary"></i> Import Assets from Excel
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Supported Formats:</strong> .xlsx, .xls<br>
+                        <strong>Required Columns:</strong> Asset Tag, Serial Number, Manufacturer, Model, Category, Status, etc.
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" asp-action="Import">
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Select Excel File</label>
+                            <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls" required>
+                            <div class="form-text">Choose an Excel file containing asset data</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="previewData" name="previewData" value="true">
+                                <label class="form-check-label" for="previewData">
+                                    Preview data before import
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="duplicateHandling" class="form-label">Duplicate Handling</label>
+                            <select class="form-select" id="duplicateHandling" name="duplicateHandling">
+                                <option value="skip">Skip duplicates</option>
+                                <option value="update">Update existing</option>
+                                <option value="create">Create new</option>
+                            </select>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload"></i> Start Import
+                            </button>
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Assets
+                            </a>
+                        </div>
+                    </form>
+
+                    <hr>
+
+                    <div class="mt-4">
+                        <h5>Import Template</h5>
+                        <p>Download our Excel template to ensure your data is in the correct format:</p>
+                        <a asp-action="DownloadTemplate" class="btn btn-outline-primary">
+                            <i class="bi bi-download"></i> Download Template
+                        </a>
+                    </div>
+
+                    <div class="mt-4">
+                        <h5>Recent Imports</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>File</th>
+                                        <th>Status</th>
+                                        <th>Records</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">No recent imports</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // File validation
+        document.getElementById('file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const allowedTypes = [
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/vnd.ms-excel'
+                ];
+                
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Please select a valid Excel file (.xlsx or .xls)');
+                    this.value = '';
+                }
+            }
+        });
+    </script>
+}
