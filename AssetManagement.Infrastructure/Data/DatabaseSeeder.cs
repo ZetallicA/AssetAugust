@@ -100,10 +100,56 @@ public class DatabaseSeeder
 
     private async Task SeedBuildingsAndFloorsAsync()
     {
+        // Check if 100 Church Street building exists, if not add it
+        var churchStreetBuilding = await _context.Buildings.FirstOrDefaultAsync(b => b.BuildingCode == "100CHURCH");
+        if (churchStreetBuilding == null)
+        {
+            // Add 100 Church Street building
+            var newBuilding = new Building
+            {
+                Name = "100 Church Street",
+                Address = "100 Church Street",
+                City = "New York",
+                State = "NY",
+                ZipCode = "10007",
+                BuildingCode = "100CHURCH",
+                CreatedBy = "System"
+            };
+
+            await _context.Buildings.AddAsync(newBuilding);
+            await _context.SaveChangesAsync();
+
+            // Add the 12th floor
+            var newFloor = new Floor
+            {
+                Name = "12th Floor",
+                FloorNumber = "12",
+                Description = "100 Church Street - 12th Floor",
+                BuildingId = newBuilding.Id,
+                CreatedBy = "System"
+            };
+
+            await _context.Floors.AddAsync(newFloor);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Added 100 Church Street building with 12th floor");
+        }
+
+        // Only seed other buildings if none exist
         if (!await _context.Buildings.AnyAsync())
         {
             var buildings = new List<Building>
             {
+                new Building
+                {
+                    Name = "100 Church Street",
+                    Address = "100 Church Street",
+                    City = "New York",
+                    State = "NY",
+                    ZipCode = "10007",
+                    BuildingCode = "100CHURCH",
+                    CreatedBy = "System"
+                },
                 new Building
                 {
                     Name = "66 John Street",
@@ -167,6 +213,7 @@ public class DatabaseSeeder
                 // Add floors based on actual building configurations
                 var floorNumbers = building.BuildingCode switch
                 {
+                    "100CHURCH" => new[] { 12 }, // 100 Church Street - 12th Floor
                     "66JOHN" => new[] { 10, 11 }, // 66 John Street - 10th and 11th Floors
                     "BROOKLYN" => new[] { 6, 7 }, // 9 Bond Street - 6th and 7th Floors
                     "BRONX" => new[] { 6 }, // 260 E. 161 Street - 6th Floor

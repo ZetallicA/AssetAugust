@@ -42,54 +42,65 @@ public class ExcelImportService : IExcelImportService
             _logger.LogInformation("Starting Excel import for file: {FileName}. Total rows to process: {RowCount}", 
                 fileName, rows.Count());
             
+            // Get column mapping from header row
+            var headerRow = worksheet.Row(1);
+            var columnMapping = GetColumnMapping(headerRow);
+            
+            _logger.LogInformation("Column mapping detected: {ColumnMapping}", 
+                string.Join(", ", columnMapping.Select(kvp => $"{kvp.Key}:{kvp.Value}")));
+            
             foreach (var row in rows)
             {
                 try
                 {
                     var asset = new Asset
                     {
-                        AssetTag = GetCellValue(row, 1),
-                        SerialNumber = GetCellValue(row, 2),
-                        ServiceTag = GetCellValue(row, 3),
-                        Manufacturer = GetCellValue(row, 4),
-                        Model = GetCellValue(row, 5),
-                        Category = GetCellValue(row, 6),
-                        NetName = GetCellValue(row, 7),
-                        AssignedUserName = GetCellValue(row, 8),
-                        AssignedUserEmail = GetCellValue(row, 9),
-                        Manager = GetCellValue(row, 10),
-                        Department = GetCellValue(row, 11),
-                        Unit = GetCellValue(row, 12),
-                        Location = GetCellValue(row, 13),
-                        Floor = GetCellValue(row, 14),
-                        Desk = GetCellValue(row, 15),
-                        Status = GetCellValue(row, 16),
-                        IpAddress = GetCellValue(row, 17),
-                        MacAddress = GetCellValue(row, 18),
-                        WallPort = GetCellValue(row, 19),
-                        SwitchName = GetCellValue(row, 20),
-                        SwitchPort = GetCellValue(row, 21),
-                        PhoneNumber = GetCellValue(row, 22),
-                        Extension = GetCellValue(row, 23),
-                        Imei = GetCellValue(row, 24),
-                        CardNumber = GetCellValue(row, 25),
-                        OsVersion = GetCellValue(row, 26),
-                        License1 = GetCellValue(row, 27),
-                        License2 = GetCellValue(row, 28),
-                        License3 = GetCellValue(row, 29),
-                        License4 = GetCellValue(row, 30),
-                        License5 = GetCellValue(row, 31),
-                        PurchasePrice = GetDecimalValue(row, 32),
-                        OrderNumber = GetCellValue(row, 33),
-                        Vendor = GetCellValue(row, 34),
-                        VendorInvoice = GetCellValue(row, 35),
-                        PurchaseDate = GetDateTimeValue(row, 36),
-                        WarrantyStart = GetDateTimeValue(row, 37),
-                        WarrantyEndDate = GetDateTimeValue(row, 38),
-                        Notes = GetCellValue(row, 39),
+                        AssetTag = GetCellValueByColumn(row, columnMapping, "Asset Tag"),
+                        SerialNumber = GetCellValueByColumn(row, columnMapping, "Serial Number"),
+                        ServiceTag = GetCellValueByColumn(row, columnMapping, "Service Tag"),
+                        Manufacturer = GetCellValueByColumn(row, columnMapping, "Manufacturer"),
+                        Model = GetCellValueByColumn(row, columnMapping, "Model"),
+                        Category = GetCellValueByColumn(row, columnMapping, "Category"),
+                        NetName = GetCellValueByColumn(row, columnMapping, "Net Name"),
+                        AssignedUserName = GetCellValueByColumn(row, columnMapping, "Assigned User Name"),
+                        AssignedUserEmail = GetCellValueByColumn(row, columnMapping, "Assigned User Email"),
+                        Manager = GetCellValueByColumn(row, columnMapping, "Manager"),
+                        Department = GetCellValueByColumn(row, columnMapping, "Department"),
+                        Unit = GetCellValueByColumn(row, columnMapping, "Unit"),
+                        Location = GetCellValueByColumn(row, columnMapping, "Location"),
+                        Floor = GetCellValueByColumn(row, columnMapping, "Floor"),
+                        Desk = GetCellValueByColumn(row, columnMapping, "Desk"),
+                        Status = GetCellValueByColumn(row, columnMapping, "Status"),
+                        IpAddress = GetCellValueByColumn(row, columnMapping, "IP Address"),
+                        MacAddress = GetCellValueByColumn(row, columnMapping, "MAC Address"),
+                        WallPort = GetCellValueByColumn(row, columnMapping, "Wall Port"),
+                        SwitchName = GetCellValueByColumn(row, columnMapping, "Switch Name"),
+                        SwitchPort = GetCellValueByColumn(row, columnMapping, "Switch Port"),
+                        PhoneNumber = GetCellValueByColumn(row, columnMapping, "Phone Number"),
+                        Extension = GetCellValueByColumn(row, columnMapping, "Extension"),
+                        Imei = GetCellValueByColumn(row, columnMapping, "IMEI"),
+                        CardNumber = GetCellValueByColumn(row, columnMapping, "Card Number"),
+                        OsVersion = GetCellValueByColumn(row, columnMapping, "OS Version"),
+                        License1 = GetCellValueByColumn(row, columnMapping, "License1"),
+                        License2 = GetCellValueByColumn(row, columnMapping, "License2"),
+                        License3 = GetCellValueByColumn(row, columnMapping, "License3"),
+                        License4 = GetCellValueByColumn(row, columnMapping, "License4"),
+                        License5 = GetCellValueByColumn(row, columnMapping, "License5"),
+                        PurchasePrice = GetDecimalValueByColumn(row, columnMapping, "Purchase Price"),
+                        OrderNumber = GetCellValueByColumn(row, columnMapping, "Order Number"),
+                        Vendor = GetCellValueByColumn(row, columnMapping, "Vendor"),
+                        VendorInvoice = GetCellValueByColumn(row, columnMapping, "Vendor Invoice"),
+                        PurchaseDate = GetDateTimeValueByColumn(row, columnMapping, "Purchase Date"),
+                        WarrantyStart = GetDateTimeValueByColumn(row, columnMapping, "Warranty Start"),
+                        WarrantyEndDate = GetDateTimeValueByColumn(row, columnMapping, "Warranty End Date"),
+                        Notes = GetCellValueByColumn(row, columnMapping, "Notes"),
                         CreatedAt = DateTime.UtcNow,
                         CreatedBy = importedBy
                     };
+
+                    // Debug logging for Extension and OS Version values
+                    _logger.LogDebug("Row {RowNumber}: Extension='{Extension}', OS Version='{OsVersion}'", 
+                        row.RowNumber(), asset.Extension, asset.OsVersion);
 
                     // Validate required fields
                     if (string.IsNullOrWhiteSpace(asset.AssetTag))
@@ -100,7 +111,7 @@ public class ExcelImportService : IExcelImportService
                             AssetTag = asset.AssetTag ?? "",
                             SerialNumber = asset.SerialNumber ?? "",
                             ErrorMessage = "Asset Tag is required",
-                            RowData = GetRowData(row)
+                            RowData = GetRowData(row, columnMapping)
                         };
                         result.ErrorDetails.Add(error);
                         errors.Add($"Row {row.RowNumber()}: Asset Tag is required");
@@ -111,101 +122,100 @@ public class ExcelImportService : IExcelImportService
                     
                     _logger.LogDebug("Processing asset: {AssetTag} from row {RowNumber}", asset.AssetTag, row.RowNumber());
 
-                                            // Check for duplicate asset tag
-                        var existingAsset = await _context.Assets
-                            .FirstOrDefaultAsync(a => a.AssetTag == asset.AssetTag);
+                    // Check for duplicate asset tag
+                    var existingAsset = await _context.Assets
+                        .FirstOrDefaultAsync(a => a.AssetTag == asset.AssetTag);
+                    
+                    if (existingAsset != null)
+                    {
+                        var error = new ImportError
+                        {
+                            RowNumber = row.RowNumber(),
+                            AssetTag = asset.AssetTag,
+                            SerialNumber = asset.SerialNumber ?? "",
+                            ErrorMessage = $"Asset Tag '{asset.AssetTag}' already exists in database. Skipping duplicate.",
+                            RowData = GetRowData(row, columnMapping)
+                        };
+                        result.ErrorDetails.Add(error);
+                        _logger.LogWarning("Duplicate asset tag found in database: {AssetTag}. Skipping row {RowNumber}", asset.AssetTag, row.RowNumber());
+                        errors.Add($"Row {row.RowNumber()}: Asset Tag '{asset.AssetTag}' already exists in database. Skipping duplicate.");
+                        result.Errors++;
+                        continue;
+                    }
+
+                    // Check for duplicate asset tag within current import
+                    if (processedAssetTags.Contains(asset.AssetTag))
+                    {
+                        var error = new ImportError
+                        {
+                            RowNumber = row.RowNumber(),
+                            AssetTag = asset.AssetTag,
+                            SerialNumber = asset.SerialNumber ?? "",
+                            ErrorMessage = $"Asset Tag '{asset.AssetTag}' is duplicate within this import file. Skipping duplicate.",
+                            RowData = GetRowData(row, columnMapping)
+                        };
+                        result.ErrorDetails.Add(error);
+                        _logger.LogWarning("Duplicate asset tag found in import file: {AssetTag}. Skipping row {RowNumber}", asset.AssetTag, row.RowNumber());
+                        errors.Add($"Row {row.RowNumber()}: Asset Tag '{asset.AssetTag}' is duplicate within this import file. Skipping duplicate.");
+                        result.Errors++;
+                        continue;
+                    }
+
+                    // Validate location code if provided - but don't reject, just flag for review
+                    if (!string.IsNullOrWhiteSpace(asset.Location))
+                    {
+                        // Define location code aliases
+                        var locationAliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            { "LIC", "LIC" },                    // Queens
+                            { "BROOKLYN", "BROOKLYN" },          // Brooklyn
+                            { "BRONX", "BRONX" },                // Bronx
+                            { "STATEN ISLAND", "STATEN ISLAND" }, // Staten Island
+                            { "66JOHN", "66JOHN" }               // 66 John Street (Manhattan)
+                        };
+
+                        // Check if the location is an alias and map it to the actual building code
+                        if (locationAliases.ContainsKey(asset.Location))
+                        {
+                            asset.Location = locationAliases[asset.Location];
+                        }
+
+                        // Check if the location is valid (either a natural name or a building code)
+                        var validLocation = locationAliases.ContainsKey(asset.Location) || 
+                                           await _context.Buildings.AnyAsync(b => b.BuildingCode == asset.Location);
                         
-                        if (existingAsset != null)
+                        if (!validLocation)
                         {
                             var error = new ImportError
                             {
                                 RowNumber = row.RowNumber(),
                                 AssetTag = asset.AssetTag,
                                 SerialNumber = asset.SerialNumber ?? "",
-                                ErrorMessage = $"Asset Tag '{asset.AssetTag}' already exists in database. Skipping duplicate.",
-                                RowData = GetRowData(row)
+                                ErrorMessage = $"Location code '{asset.Location}' is not recognized. Valid locations: LIC, BROOKLYN, BRONX, STATEN ISLAND, 66JOHN",
+                                RowData = GetRowData(row, columnMapping)
                             };
                             result.ErrorDetails.Add(error);
-                            _logger.LogWarning("Duplicate asset tag found in database: {AssetTag}. Skipping row {RowNumber}", asset.AssetTag, row.RowNumber());
-                            errors.Add($"Row {row.RowNumber()}: Asset Tag '{asset.AssetTag}' already exists in database. Skipping duplicate.");
+                            _logger.LogWarning("Invalid location code found: {Location}. Row {RowNumber} - Flagging for review", asset.Location, row.RowNumber());
+                            errors.Add($"Row {row.RowNumber()}: Location code '{asset.Location}' is not recognized. Valid locations: LIC, BROOKLYN, BRONX, STATEN ISLAND, 66JOHN");
                             result.Errors++;
-                            continue;
+                            continue; // Skip this asset - don't import it
                         }
+                    }
 
-                        // Check for duplicate asset tag within current import
-                        if (processedAssetTags.Contains(asset.AssetTag))
-                        {
-                            var error = new ImportError
-                            {
-                                RowNumber = row.RowNumber(),
-                                AssetTag = asset.AssetTag,
-                                SerialNumber = asset.SerialNumber ?? "",
-                                ErrorMessage = $"Asset Tag '{asset.AssetTag}' is duplicate within this import file. Skipping duplicate.",
-                                RowData = GetRowData(row)
-                            };
-                            result.ErrorDetails.Add(error);
-                            _logger.LogWarning("Duplicate asset tag found in import file: {AssetTag}. Skipping row {RowNumber}", asset.AssetTag, row.RowNumber());
-                            errors.Add($"Row {row.RowNumber()}: Asset Tag '{asset.AssetTag}' is duplicate within this import file. Skipping duplicate.");
-                            result.Errors++;
-                            continue;
-                        }
-
-                        // Validate location code if provided - but don't reject, just flag for review
-                        if (!string.IsNullOrWhiteSpace(asset.Location))
-                        {
-                            // Define location code aliases
-                            var locationAliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                            {
-                                { "LIC", "LIC" },                    // Queens
-                                { "BROOKLYN", "BROOKLYN" },          // Brooklyn
-                                { "BRONX", "BRONX" },                // Bronx
-                                { "STATEN ISLAND", "STATEN ISLAND" }, // Staten Island
-                                { "CHURCHST", "CHURCHST" },          // 100 Church Street (Manhattan)
-                                { "66JOHN", "66JOHN" }               // 66 John Street (Manhattan)
-                            };
-
-                            // Check if the location is an alias and map it to the actual building code
-                            if (locationAliases.ContainsKey(asset.Location))
-                            {
-                                asset.Location = locationAliases[asset.Location];
-                            }
-
-                            // Check if the location is valid (either a natural name or a building code)
-                            var validLocation = locationAliases.ContainsKey(asset.Location) || 
-                                               await _context.Buildings.AnyAsync(b => b.BuildingCode == asset.Location);
-                            
-                            if (!validLocation)
-                            {
-                                var error = new ImportError
-                                {
-                                    RowNumber = row.RowNumber(),
-                                    AssetTag = asset.AssetTag,
-                                    SerialNumber = asset.SerialNumber ?? "",
-                                    ErrorMessage = $"Location code '{asset.Location}' is not recognized. Valid locations: LIC, BROOKLYN, BRONX, STATEN ISLAND, 66JOHN",
-                                    RowData = GetRowData(row)
-                                };
-                                result.ErrorDetails.Add(error);
-                                _logger.LogWarning("Invalid location code found: {Location}. Row {RowNumber} - Flagging for review", asset.Location, row.RowNumber());
-                                errors.Add($"Row {row.RowNumber()}: Location code '{asset.Location}' is not recognized. Valid locations: LIC, BROOKLYN, BRONX, STATEN ISLAND, 66JOHN");
-                                result.Errors++;
-                                continue; // Skip this asset - don't import it
-                            }
-                        }
-
-                        // Add new asset
-                        assets.Add(asset);
-                        processedAssetTags.Add(asset.AssetTag); // Track this asset tag
-                        result.Imported++;
+                    // Add new asset
+                    assets.Add(asset);
+                    processedAssetTags.Add(asset.AssetTag); // Track this asset tag
+                    result.Imported++;
                 }
                 catch (Exception ex)
                 {
                     var error = new ImportError
                     {
                         RowNumber = row.RowNumber(),
-                        AssetTag = GetCellValue(row, 1) ?? "",
-                        SerialNumber = GetCellValue(row, 2) ?? "",
+                        AssetTag = GetCellValueByColumn(row, columnMapping, "Asset Tag") ?? "",
+                        SerialNumber = GetCellValueByColumn(row, columnMapping, "Serial Number") ?? "",
                         ErrorMessage = ex.Message,
-                        RowData = GetRowData(row)
+                        RowData = GetRowData(row, columnMapping)
                     };
                     result.ErrorDetails.Add(error);
                     errors.Add($"Row {row.RowNumber()}: {ex.Message}");
@@ -270,6 +280,13 @@ public class ExcelImportService : IExcelImportService
             _logger.LogInformation("Starting Excel preview for file: {FileName}. Total rows to process: {RowCount}", 
                 fileName, totalRows);
             
+            // Get column mapping from header row
+            var headerRow = worksheet.Row(1);
+            var columnMapping = GetColumnMapping(headerRow);
+            
+            _logger.LogInformation("Column mapping detected for preview: {ColumnMapping}", 
+                string.Join(", ", columnMapping.Select(kvp => $"{kvp.Key}:{kvp.Value}")));
+            
             var rowsToPreview = rows.Take(10).ToList();
             _logger.LogInformation("Found {PreviewCount} rows to preview", rowsToPreview.Count);
             
@@ -289,15 +306,15 @@ public class ExcelImportService : IExcelImportService
                 {
                     _logger.LogInformation("Starting to process row {RowNumber}", row.RowNumber());
                     
-                    var assetTag = GetCellValue(row, 1);
-                    var serialNumber = GetCellValue(row, 2);
-                    var manufacturer = GetCellValue(row, 4);
-                    var model = GetCellValue(row, 5);
-                    var category = GetCellValue(row, 6);
-                    var assignedUser = GetCellValue(row, 8);
-                    var department = GetCellValue(row, 11);
-                    var location = GetCellValue(row, 13);
-                    var status = GetCellValue(row, 16);
+                    var assetTag = GetCellValueByColumn(row, columnMapping, "Asset Tag");
+                    var serialNumber = GetCellValueByColumn(row, columnMapping, "Serial Number");
+                    var manufacturer = GetCellValueByColumn(row, columnMapping, "Manufacturer");
+                    var model = GetCellValueByColumn(row, columnMapping, "Model");
+                    var category = GetCellValueByColumn(row, columnMapping, "Category");
+                    var assignedUser = GetCellValueByColumn(row, columnMapping, "Assigned User Name");
+                    var department = GetCellValueByColumn(row, columnMapping, "Department");
+                    var location = GetCellValueByColumn(row, columnMapping, "Location");
+                    var status = GetCellValueByColumn(row, columnMapping, "Status");
 
                     _logger.LogInformation("Row {RowNumber}: Extracted values - AssetTag: '{AssetTag}', Location: '{Location}'", 
                         row.RowNumber(), assetTag, location);
@@ -427,9 +444,29 @@ public class ExcelImportService : IExcelImportService
         return null;
     }
 
-    private static Dictionary<string, object> GetRowData(IXLRow row)
+    private static Dictionary<string, object> GetRowData(IXLRow row, Dictionary<string, int> columnMapping)
     {
-        var headers = new[]
+        var rowData = new Dictionary<string, object>();
+        foreach (var kvp in columnMapping)
+        {
+            var header = kvp.Key;
+            var columnIndex = kvp.Value; // Already 1-based from GetColumnMapping
+            var cell = row.Cell(columnIndex);
+            rowData[header] = cell.IsEmpty() ? "" : cell.GetString();
+        }
+        return rowData;
+    }
+
+    private Dictionary<string, int> GetColumnMapping(IXLRow headerRow)
+    {
+        var columnMapping = new Dictionary<string, int>();
+        var headers = headerRow.CellsUsed().Select(c => c.GetString().Trim()).ToList();
+        var usedColumns = new HashSet<int>();
+
+        _logger.LogInformation("Found headers in Excel file: {Headers}", string.Join(", ", headers));
+
+        // Define expected headers with their typical positions (0-based)
+        var expectedHeaders = new[]
         {
             "Asset Tag", "Serial Number", "Service Tag", "Manufacturer", "Model", "Category", "Net Name",
             "Assigned User Name", "Assigned User Email", "Manager", "Department", "Unit", "Location", "Floor", "Desk",
@@ -439,15 +476,150 @@ public class ExcelImportService : IExcelImportService
             "Notes", "Created At", "Created By"
         };
 
-        var rowData = new Dictionary<string, object>();
-        for (int i = 0; i < headers.Length && i < 41; i++)
+        // First pass: Try exact matches
+        for (int i = 0; i < expectedHeaders.Length; i++)
         {
-            var cell = row.Cell(i + 1);
-            rowData[headers[i]] = cell.IsEmpty() ? "" : cell.GetString();
+            var header = expectedHeaders[i];
+            var foundIndex = headers.IndexOf(header);
+            if (foundIndex != -1 && !usedColumns.Contains(foundIndex))
+            {
+                columnMapping[header] = foundIndex + 1;
+                usedColumns.Add(foundIndex);
+                _logger.LogDebug("Found exact header '{Header}' at column {ColumnIndex}", header, foundIndex + 1);
+            }
         }
-        return rowData;
+
+        // Second pass: Try partial matches for unmatched headers
+        for (int i = 0; i < expectedHeaders.Length; i++)
+        {
+            var header = expectedHeaders[i];
+            if (columnMapping.ContainsKey(header)) continue; // Already mapped
+
+            // Try to find a partial match
+            var bestMatch = -1;
+            var bestScore = 0.0;
+            
+            for (int j = 0; j < headers.Count; j++)
+            {
+                if (usedColumns.Contains(j)) continue; // Already used
+                
+                var excelHeader = headers[j];
+                var score = CalculateHeaderSimilarity(header, excelHeader);
+                
+                if (score > bestScore && score > 0.7) // Only accept good matches
+                {
+                    bestScore = score;
+                    bestMatch = j;
+                }
+            }
+
+            if (bestMatch != -1)
+            {
+                columnMapping[header] = bestMatch + 1;
+                usedColumns.Add(bestMatch);
+                _logger.LogDebug("Found partial match for '{Header}' at column {ColumnIndex} (score: {Score})", 
+                    header, bestMatch + 1, bestScore);
+            }
+            else
+            {
+                // Find first unused column
+                var unusedColumn = 0;
+                while (usedColumns.Contains(unusedColumn) && unusedColumn < headers.Count)
+                {
+                    unusedColumn++;
+                }
+                
+                if (unusedColumn < headers.Count)
+                {
+                    columnMapping[header] = unusedColumn + 1;
+                    usedColumns.Add(unusedColumn);
+                    _logger.LogWarning("No match found for '{Header}'. Using column {ColumnIndex} with header '{ExcelHeader}'.", 
+                        header, unusedColumn + 1, headers[unusedColumn]);
+                }
+                else
+                {
+                    _logger.LogWarning("No unused columns available for '{Header}'. Using default position {DefaultPosition}.", 
+                        header, i + 1);
+                    columnMapping[header] = i + 1;
+                }
+            }
+        }
+
+        // Log the final mapping
+        _logger.LogInformation("Final column mapping: {Mapping}", 
+            string.Join(", ", columnMapping.Select(kvp => $"{kvp.Key}:{kvp.Value}")));
+
+        // Add specific logging for Extension and OS Version mapping
+        if (columnMapping.ContainsKey("Extension"))
+        {
+            _logger.LogInformation("Extension mapped to column {ColumnIndex}", columnMapping["Extension"]);
+        }
+        if (columnMapping.ContainsKey("OS Version"))
+        {
+            _logger.LogInformation("OS Version mapped to column {ColumnIndex}", columnMapping["OS Version"]);
+        }
+
+        return columnMapping;
     }
 
+    private static double CalculateHeaderSimilarity(string expected, string actual)
+    {
+        if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(actual))
+            return 0;
+
+        expected = expected.ToLower().Trim();
+        actual = actual.ToLower().Trim();
+
+        // Exact match
+        if (expected == actual) return 1.0;
+
+        // Contains match
+        if (actual.Contains(expected) || expected.Contains(actual)) return 0.9;
+
+        // Word-based matching
+        var expectedWords = expected.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        var actualWords = actual.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+
+        var commonWords = expectedWords.Intersect(actualWords, StringComparer.OrdinalIgnoreCase).Count();
+        var totalWords = Math.Max(expectedWords.Length, actualWords.Length);
+
+        if (totalWords > 0)
+        {
+            return (double)commonWords / totalWords;
+        }
+
+        return 0;
+    }
+
+    private string? GetCellValueByColumn(IXLRow row, Dictionary<string, int> columnMapping, string header)
+    {
+        if (columnMapping.TryGetValue(header, out var columnIndex))
+        {
+            return GetCellValue(row, columnIndex);
+        }
+        _logger.LogWarning("Column header '{Header}' not found in column mapping. Returning null.", header);
+        return null;
+    }
+
+    private decimal? GetDecimalValueByColumn(IXLRow row, Dictionary<string, int> columnMapping, string header)
+    {
+        if (columnMapping.TryGetValue(header, out var columnIndex))
+        {
+            return GetDecimalValue(row, columnIndex);
+        }
+        _logger.LogWarning("Column header '{Header}' not found in column mapping. Returning null.", header);
+        return null;
+    }
+
+    private DateTime? GetDateTimeValueByColumn(IXLRow row, Dictionary<string, int> columnMapping, string header)
+    {
+        if (columnMapping.TryGetValue(header, out var columnIndex))
+        {
+            return GetDateTimeValue(row, columnIndex);
+        }
+        _logger.LogWarning("Column header '{Header}' not found in column mapping. Returning null.", header);
+        return null;
+    }
 
 }
 

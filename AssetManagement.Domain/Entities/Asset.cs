@@ -74,7 +74,7 @@ public class Asset
     [StringLength(50)]
     public string? PhoneNumber { get; set; }
     
-    [StringLength(10)]
+    [StringLength(20)]
     public string? Extension { get; set; }
     
     [StringLength(15)]

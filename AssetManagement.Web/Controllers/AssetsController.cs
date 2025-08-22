@@ -1316,4 +1316,301 @@ public class AssetsController : Controller
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
             fileName);
     }
+
+    // POST: Assets/UpdateField - Inline editing
+    [HttpPost]
+    [Authorize(Roles = "Admin,IT,Procurement")]
+    public async Task<IActionResult> UpdateField(int id, string field, string value)
+    {
+        try
+        {
+            var asset = await _context.Assets.FindAsync(id);
+            if (asset == null)
+            {
+                return Json(new { success = false, message = "Asset not found" });
+            }
+
+            // Validate field name
+            var validFields = new[] { 
+                "AssetTag", "SerialNumber", "ServiceTag", "Manufacturer", "Model", "Category",
+                "NetName", "AssignedUserName", "AssignedUserEmail", "Manager", "Department", "Unit",
+                "Location", "Floor", "Desk", "Status", "IpAddress", "MacAddress", "WallPort",
+                "SwitchName", "SwitchPort", "PhoneNumber", "Extension", "Imei", "CardNumber",
+                "OsVersion", "License1", "License2", "License3", "License4", "License5",
+                "OrderNumber", "Vendor", "VendorInvoice", "Notes"
+            };
+
+            if (!validFields.Contains(field))
+            {
+                return Json(new { success = false, message = "Invalid field" });
+            }
+
+            // Validate and set the field value
+            switch (field)
+            {
+                case "AssetTag":
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        return Json(new { success = false, message = "Asset Tag is required" });
+                    }
+                    if (value.Length > 50)
+                    {
+                        return Json(new { success = false, message = "Asset Tag cannot exceed 50 characters" });
+                    }
+                    // Check for duplicate Asset Tag
+                    var existingAsset = await _context.Assets.FirstOrDefaultAsync(a => a.AssetTag == value && a.Id != id);
+                    if (existingAsset != null)
+                    {
+                        return Json(new { success = false, message = "Asset Tag already exists" });
+                    }
+                    asset.AssetTag = value;
+                    break;
+
+                case "Location":
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        var validLocations = new[] { "LIC", "BROOKLYN", "BRONX", "STATEN ISLAND", "66JOHN" };
+                        if (!validLocations.Contains(value.ToUpper()))
+                        {
+                            return Json(new { success = false, message = "Invalid location. Valid locations: LIC, BROOKLYN, BRONX, STATEN ISLAND, 66JOHN" });
+                        }
+                        asset.Location = value.ToUpper();
+                    }
+                    else
+                    {
+                        asset.Location = value;
+                    }
+                    break;
+
+                case "Status":
+                    var validStatuses = new[] { "Active", "Inactive", "Maintenance", "Retired" };
+                    if (!validStatuses.Contains(value))
+                    {
+                        return Json(new { success = false, message = "Invalid status. Valid statuses: Active, Inactive, Maintenance, Retired" });
+                    }
+                    asset.Status = value;
+                    break;
+
+                case "PhoneNumber":
+                    if (!string.IsNullOrWhiteSpace(value) && value.Length > 50)
+                    {
+                        return Json(new { success = false, message = "Phone Number cannot exceed 50 characters" });
+                    }
+                    asset.PhoneNumber = value;
+                    break;
+
+                case "IpAddress":
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        if (!System.Net.IPAddress.TryParse(value, out _))
+                        {
+                            return Json(new { success = false, message = "Invalid IP Address format" });
+                        }
+                    }
+                    asset.IpAddress = value;
+                    break;
+
+                case "MacAddress":
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        var macRegex = new System.Text.RegularExpressions.Regex(@"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$");
+                        if (!macRegex.IsMatch(value))
+                        {
+                            return Json(new { success = false, message = "Invalid MAC Address format (use XX:XX:XX:XX:XX:XX)" });
+                        }
+                    }
+                    asset.MacAddress = value;
+                    break;
+
+                case "AssignedUserEmail":
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        try
+                        {
+                            var email = new System.Net.Mail.MailAddress(value);
+                        }
+                        catch
+                        {
+                            return Json(new { success = false, message = "Invalid email format" });
+                        }
+                    }
+                    asset.AssignedUserEmail = value;
+                    break;
+
+                default:
+                    // For other string fields, just set the value
+                    var property = typeof(Domain.Entities.Asset).GetProperty(field);
+                    if (property != null && property.CanWrite)
+                    {
+                        property.SetValue(asset, value);
+                    }
+                    break;
+            }
+
+            // Update audit fields
+            asset.UpdatedAt = DateTime.UtcNow;
+            asset.UpdatedBy = User.Identity?.Name ?? "System";
+
+            // Track asset history
+            var assetHistory = new AssetHistory
+            {
+                AssetId = asset.Id,
+                Action = "Updated",
+                Description = $"Field '{field}' updated to '{value}' by {User.Identity?.Name}",
+                UserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "System",
+                Timestamp = DateTime.UtcNow
+            };
+
+            await _context.AssetHistory.AddAsync(assetHistory);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Asset {AssetId} field {Field} updated to {Value} by {User}", 
+                id, field, value, User.Identity?.Name);
+
+            return Json(new { success = true, message = "Field updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating asset field {Field} to {Value} for asset {Id}", field, value, id);
+            return Json(new { success = false, message = "Error updating field: " + ex.Message });
+        }
+    }
+
+    // GET: Assets/ExportAll
+    [HttpGet]
+    [Authorize(Roles = "Admin,IT")]
+    public async Task<IActionResult> ExportAll()
+    {
+        try
+        {
+            var assets = await _context.Assets
+                .OrderBy(a => a.AssetTag)
+                .ToListAsync();
+
+            // Create Excel workbook
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Assets");
+
+            // Define all columns for complete export
+            var columns = new (string Header, Func<Domain.Entities.Asset, object> GetValue)[]
+            {
+                ("Asset Tag", a => a.AssetTag ?? ""),
+                ("Serial Number", a => a.SerialNumber ?? ""),
+                ("Service Tag", a => a.ServiceTag ?? ""),
+                ("Manufacturer", a => a.Manufacturer ?? ""),
+                ("Model", a => a.Model ?? ""),
+                ("Category", a => a.Category ?? ""),
+                ("Net Name", a => a.NetName ?? ""),
+                ("Assigned User", a => a.AssignedUserName ?? ""),
+                ("Assigned User Email", a => a.AssignedUserEmail ?? ""),
+                ("Manager", a => a.Manager ?? ""),
+                ("Department", a => a.Department ?? ""),
+                ("Unit", a => a.Unit ?? ""),
+                ("Location", a => a.Location ?? ""),
+                ("Floor", a => a.Floor ?? ""),
+                ("Desk", a => a.Desk ?? ""),
+                ("Status", a => a.Status ?? ""),
+                ("IP Address", a => a.IpAddress ?? ""),
+                ("MAC Address", a => a.MacAddress ?? ""),
+                ("Wall Port", a => a.WallPort ?? ""),
+                ("Switch Name", a => a.SwitchName ?? ""),
+                ("Switch Port", a => a.SwitchPort ?? ""),
+                ("Phone Number", a => a.PhoneNumber ?? ""),
+                ("Extension", a => a.Extension ?? ""),
+                ("IMEI", a => a.Imei ?? ""),
+                ("Card Number", a => a.CardNumber ?? ""),
+                ("OS Version", a => a.OsVersion ?? ""),
+                ("License1", a => a.License1 ?? ""),
+                ("License2", a => a.License2 ?? ""),
+                ("License3", a => a.License3 ?? ""),
+                ("License4", a => a.License4 ?? ""),
+                ("License5", a => a.License5 ?? ""),
+                ("Purchase Price", a => a.PurchasePrice?.ToString() ?? ""),
+                ("Order Number", a => a.OrderNumber ?? ""),
+                ("Vendor", a => a.Vendor ?? ""),
+                ("Vendor Invoice", a => a.VendorInvoice ?? ""),
+                ("Purchase Date", a => a.PurchaseDate?.ToString("MM/dd/yyyy") ?? ""),
+                ("Warranty Start", a => a.WarrantyStart?.ToString("MM/dd/yyyy") ?? ""),
+                ("Warranty End", a => a.WarrantyEndDate?.ToString("MM/dd/yyyy") ?? ""),
+                ("Notes", a => a.Notes ?? ""),
+                ("Created At", a => a.CreatedAt.ToString("MM/dd/yyyy HH:mm:ss")),
+                ("Created By", a => a.CreatedBy ?? ""),
+                ("Updated At", a => a.UpdatedAt?.ToString("MM/dd/yyyy HH:mm:ss") ?? ""),
+                ("Updated By", a => a.UpdatedBy ?? ""),
+                ("Is Active", a => a.IsActive ? "Yes" : "No")
+            };
+
+            // Add headers
+            for (int i = 0; i < columns.Length; i++)
+            {
+                worksheet.Cell(1, i + 1).Value = columns[i].Header;
+                worksheet.Cell(1, i + 1).Style.Font.Bold = true;
+                worksheet.Cell(1, i + 1).Style.Fill.BackgroundColor = XLColor.LightGray;
+            }
+
+            // Add data rows
+            for (int row = 0; row < assets.Count; row++)
+            {
+                var asset = assets[row];
+                for (int col = 0; col < columns.Length; col++)
+                {
+                    var value = columns[col].GetValue(asset);
+                    worksheet.Cell(row + 2, col + 1).Value = value?.ToString() ?? "";
+                }
+            }
+
+            // Auto-fit columns
+            worksheet.Columns().AdjustToContents();
+
+            // Generate file
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"All_Assets_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            return File(stream.ToArray(), 
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting all assets");
+            return BadRequest("Error exporting assets: " + ex.Message);
+        }
+    }
+
+    // POST: Assets/DeleteAll
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeleteAll()
+    {
+        try
+        {
+            // Get count before deletion for logging
+            var assetCount = await _context.Assets.CountAsync();
+            
+            // Delete all assets
+            var assets = await _context.Assets.ToListAsync();
+            _context.Assets.RemoveRange(assets);
+            
+            // Also delete related asset history records
+            var assetHistory = await _context.AssetHistory.ToListAsync();
+            _context.AssetHistory.RemoveRange(assetHistory);
+            
+            // Delete asset requests
+            var assetRequests = await _context.AssetRequests.ToListAsync();
+            _context.AssetRequests.RemoveRange(assetRequests);
+            
+            await _context.SaveChangesAsync();
+
+            _logger.LogWarning("All {AssetCount} assets deleted by user {User}", assetCount, User.Identity?.Name);
+
+            return Json(new { success = true, message = $"Successfully deleted {assetCount} assets and related records." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting all assets");
+            return Json(new { success = false, message = "Error deleting assets: " + ex.Message });
+        }
+    }
 }

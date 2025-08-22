@@ -28,6 +28,13 @@ public class Building
     [StringLength(50)]
     public string? BuildingCode { get; set; }
     
+    // Temporarily commented out until database migration is complete
+    // [StringLength(20)]
+    // public string? Phone { get; set; }
+    
+    // [StringLength(20)]
+    // public string? Fax { get; set; }
+    
     public bool IsActive { get; set; } = true;
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

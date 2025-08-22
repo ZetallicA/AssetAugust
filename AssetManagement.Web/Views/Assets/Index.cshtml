@@ -4,6 +4,8 @@
     ViewData["Title"] = "Assets";
 }
 
+@Html.AntiForgeryToken()
+
 <style>
     .pagination .page-link {
         color: #007bff;
@@ -98,6 +100,70 @@
      
      /* Ensure dropdown arrow doesn't overlap with text */
      .form-select {
+     
+     /* Inline editing styles */
+     .editable-cell {
+         cursor: pointer;
+         transition: background-color 0.2s;
+     }
+     
+     .editable-cell:hover {
+         background-color: #e3f2fd !important;
+         border: 1px solid #2196f3;
+     }
+     
+     .editable-cell.editing {
+         padding: 0 !important;
+         background-color: #fff !important;
+         border: 2px solid #2196f3 !important;
+     }
+     
+     .editable-cell.editing input,
+     .editable-cell.editing select {
+         width: 100%;
+         height: 100%;
+         border: none;
+         outline: none;
+         padding: 0.375rem 0.25rem;
+         font-size: 0.8rem;
+         background-color: transparent;
+     }
+     
+     .editable-cell.editing input:focus,
+     .editable-cell.editing select:focus {
+         box-shadow: none;
+     }
+     
+     .editable-cell .badge {
+         cursor: pointer;
+     }
+     
+     .editable-cell.editing .badge {
+         display: none;
+     }
+     
+     .editable-cell.editing select {
+         background-color: white;
+         border: 1px solid #ccc;
+     }
+     
+     /* Status dropdown styling */
+     .status-dropdown {
+         width: 100%;
+         padding: 0.25rem;
+         font-size: 0.75rem;
+         border: none;
+         outline: none;
+     }
+     
+     /* Location dropdown styling */
+     .location-dropdown {
+         width: 100%;
+         padding: 0.25rem;
+         font-size: 0.75rem;
+         border: none;
+         outline: none;
+     }
          background-position: right 0.375rem center;
          padding-right: 1.5rem;
      }
@@ -215,6 +281,13 @@
                 <a asp-action="ClearImportErrors" class="btn btn-secondary" onclick="return confirm('Are you sure you want to clear all import errors?')">
                     <i class="bi bi-x-circle"></i> Clear Errors
                 </a>
+                
+                @if (User.IsInRole("Admin"))
+                {
+                    <button type="button" class="btn btn-danger" onclick="confirmDeleteAll()" title="Delete All Assets">
+                        <i class="bi bi-trash"></i> Delete All
+                    </button>
+                }
             </div>
             
             @if (User.IsInRole("Admin") || User.IsInRole("IT") || User.IsInRole("Procurement"))
@@ -261,6 +334,13 @@
                     <button type="button" class="btn btn-outline-success" onclick="exportVisibleColumns()" title="Export Visible Columns">
                         <i class="bi bi-download"></i> Export
                     </button>
+                    
+                    @if (User.IsInRole("Admin") || User.IsInRole("IT"))
+                    {
+                        <a href="@Url.Action("ExportAll", "Assets")" class="btn btn-outline-info" title="Export All Assets">
+                            <i class="bi bi-file-earmark-excel"></i> Export All
+                        </a>
+                    }
 
                 </div>
             </div>
@@ -1005,24 +1085,24 @@
                                         <input type="checkbox" name="selectedIds" class="asset-checkbox" value="@asset.Id" onchange="updateBulkDeleteButton()" />
                                     </td>
                                 }
-                                                                 <td class="column-assetTag" title="@asset.AssetTag"><strong>@asset.AssetTag</strong></td>
-                                 <td class="column-serialNumber" title="@asset.SerialNumber">@asset.SerialNumber</td>
-                                 <td class="column-serviceTag" title="@asset.ServiceTag">@asset.ServiceTag</td>
-                                 <td class="column-manufacturer" title="@asset.Manufacturer">@asset.Manufacturer</td>
-                                 <td class="column-model" title="@asset.Model">@asset.Model</td>
-                                 <td class="column-category">
+                                                                 <td class="column-assetTag editable-cell" data-field="AssetTag" data-id="@asset.Id" title="@asset.AssetTag"><strong>@asset.AssetTag</strong></td>
+                                 <td class="column-serialNumber editable-cell" data-field="SerialNumber" data-id="@asset.Id" title="@asset.SerialNumber">@asset.SerialNumber</td>
+                                 <td class="column-serviceTag editable-cell" data-field="ServiceTag" data-id="@asset.Id" title="@asset.ServiceTag">@asset.ServiceTag</td>
+                                 <td class="column-manufacturer editable-cell" data-field="Manufacturer" data-id="@asset.Id" title="@asset.Manufacturer">@asset.Manufacturer</td>
+                                 <td class="column-model editable-cell" data-field="Model" data-id="@asset.Id" title="@asset.Model">@asset.Model</td>
+                                 <td class="column-category editable-cell" data-field="Category" data-id="@asset.Id" title="@asset.Category">
                                      <span class="badge bg-secondary">@asset.Category</span>
                                  </td>
-                                 <td class="column-netName" title="@asset.NetName">@asset.NetName</td>
-                                 <td class="column-assignedUser" title="@asset.AssignedUserName">@asset.AssignedUserName</td>
-                                 <td class="column-assignedUserEmail" title="@asset.AssignedUserEmail">@asset.AssignedUserEmail</td>
-                                 <td class="column-manager" title="@asset.Manager">@asset.Manager</td>
-                                 <td class="column-department" title="@asset.Department">@asset.Department</td>
-                                 <td class="column-unit" title="@asset.Unit">@asset.Unit</td>
-                                 <td class="column-location" title="@asset.Location">@asset.Location</td>
-                                 <td class="column-floor" title="@asset.Floor">@asset.Floor</td>
-                                 <td class="column-desk" title="@asset.Desk">@asset.Desk</td>
-                                 <td class="column-status">
+                                 <td class="column-netName editable-cell" data-field="NetName" data-id="@asset.Id" title="@asset.NetName">@asset.NetName</td>
+                                 <td class="column-assignedUser editable-cell" data-field="AssignedUserName" data-id="@asset.Id" title="@asset.AssignedUserName">@asset.AssignedUserName</td>
+                                 <td class="column-assignedUserEmail editable-cell" data-field="AssignedUserEmail" data-id="@asset.Id" title="@asset.AssignedUserEmail">@asset.AssignedUserEmail</td>
+                                 <td class="column-manager editable-cell" data-field="Manager" data-id="@asset.Id" title="@asset.Manager">@asset.Manager</td>
+                                 <td class="column-department editable-cell" data-field="Department" data-id="@asset.Id" title="@asset.Department">@asset.Department</td>
+                                 <td class="column-unit editable-cell" data-field="Unit" data-id="@asset.Id" title="@asset.Unit">@asset.Unit</td>
+                                 <td class="column-location editable-cell" data-field="Location" data-id="@asset.Id" title="@asset.Location">@asset.Location</td>
+                                 <td class="column-floor editable-cell" data-field="Floor" data-id="@asset.Id" title="@asset.Floor">@asset.Floor</td>
+                                 <td class="column-desk editable-cell" data-field="Desk" data-id="@asset.Id" title="@asset.Desk">@asset.Desk</td>
+                                 <td class="column-status editable-cell" data-field="Status" data-id="@asset.Id" title="@asset.Status">
                                      @{
                                          var statusClass = asset.Status?.ToLower() switch
                                          {
@@ -1035,28 +1115,28 @@
                                      }
                                      <span class="badge @statusClass">@asset.Status</span>
                                  </td>
-                                 <td class="column-ipAddress" title="@asset.IpAddress">@asset.IpAddress</td>
-                                 <td class="column-macAddress" title="@asset.MacAddress">@asset.MacAddress</td>
-                                 <td class="column-wallPort" title="@asset.WallPort">@asset.WallPort</td>
-                                 <td class="column-switchName" title="@asset.SwitchName">@asset.SwitchName</td>
-                                 <td class="column-switchPort" title="@asset.SwitchPort">@asset.SwitchPort</td>
-                                 <td class="column-phoneNumber" title="@asset.PhoneNumber">@asset.PhoneNumber</td>
-                                 <td class="column-extension" title="@asset.Extension">@asset.Extension</td>
-                                 <td class="column-imei" title="@asset.Imei">@asset.Imei</td>
-                                 <td class="column-cardNumber" title="@asset.CardNumber">@asset.CardNumber</td>
-                                 <td class="column-osVersion" title="@asset.OsVersion">@asset.OsVersion</td>
-                                 <td class="column-license1" title="@asset.License1">@asset.License1</td>
-                                 <td class="column-license2" title="@asset.License2">@asset.License2</td>
-                                 <td class="column-license3" title="@asset.License3">@asset.License3</td>
-                                 <td class="column-license4" title="@asset.License4">@asset.License4</td>
-                                 <td class="column-license5" title="@asset.License5">@asset.License5</td>
-                                 <td class="column-purchaseOrderNumber" title="@asset.OrderNumber">@asset.OrderNumber</td>
-                                 <td class="column-vendor" title="@asset.Vendor">@asset.Vendor</td>
-                                 <td class="column-vendorInvoice" title="@asset.VendorInvoice">@asset.VendorInvoice</td>
+                                 <td class="column-ipAddress editable-cell" data-field="IpAddress" data-id="@asset.Id" title="@asset.IpAddress">@asset.IpAddress</td>
+                                 <td class="column-macAddress editable-cell" data-field="MacAddress" data-id="@asset.Id" title="@asset.MacAddress">@asset.MacAddress</td>
+                                 <td class="column-wallPort editable-cell" data-field="WallPort" data-id="@asset.Id" title="@asset.WallPort">@asset.WallPort</td>
+                                 <td class="column-switchName editable-cell" data-field="SwitchName" data-id="@asset.Id" title="@asset.SwitchName">@asset.SwitchName</td>
+                                 <td class="column-switchPort editable-cell" data-field="SwitchPort" data-id="@asset.Id" title="@asset.SwitchPort">@asset.SwitchPort</td>
+                                 <td class="column-phoneNumber editable-cell" data-field="PhoneNumber" data-id="@asset.Id" title="@asset.PhoneNumber">@asset.PhoneNumber</td>
+                                 <td class="column-extension editable-cell" data-field="Extension" data-id="@asset.Id" title="@asset.Extension">@asset.Extension</td>
+                                 <td class="column-imei editable-cell" data-field="Imei" data-id="@asset.Id" title="@asset.Imei">@asset.Imei</td>
+                                 <td class="column-cardNumber editable-cell" data-field="CardNumber" data-id="@asset.Id" title="@asset.CardNumber">@asset.CardNumber</td>
+                                 <td class="column-osVersion editable-cell" data-field="OsVersion" data-id="@asset.Id" title="@asset.OsVersion">@asset.OsVersion</td>
+                                 <td class="column-license1 editable-cell" data-field="License1" data-id="@asset.Id" title="@asset.License1">@asset.License1</td>
+                                 <td class="column-license2 editable-cell" data-field="License2" data-id="@asset.Id" title="@asset.License2">@asset.License2</td>
+                                 <td class="column-license3 editable-cell" data-field="License3" data-id="@asset.Id" title="@asset.License3">@asset.License3</td>
+                                 <td class="column-license4 editable-cell" data-field="License4" data-id="@asset.Id" title="@asset.License4">@asset.License4</td>
+                                 <td class="column-license5 editable-cell" data-field="License5" data-id="@asset.Id" title="@asset.License5">@asset.License5</td>
+                                 <td class="column-purchaseOrderNumber editable-cell" data-field="OrderNumber" data-id="@asset.Id" title="@asset.OrderNumber">@asset.OrderNumber</td>
+                                 <td class="column-vendor editable-cell" data-field="Vendor" data-id="@asset.Id" title="@asset.Vendor">@asset.Vendor</td>
+                                 <td class="column-vendorInvoice editable-cell" data-field="VendorInvoice" data-id="@asset.Id" title="@asset.VendorInvoice">@asset.VendorInvoice</td>
                                  <td class="column-purchaseDate" title="@(asset.PurchaseDate?.ToString("MM/dd/yyyy"))">@(asset.PurchaseDate?.ToString("MM/dd/yyyy"))</td>
                                  <td class="column-warrantyStart" title="@(asset.WarrantyStart?.ToString("MM/dd/yyyy"))">@(asset.WarrantyStart?.ToString("MM/dd/yyyy"))</td>
                                  <td class="column-warrantyEnd" title="@(asset.WarrantyEndDate?.ToString("MM/dd/yyyy"))">@(asset.WarrantyEndDate?.ToString("MM/dd/yyyy"))</td>
-                                 <td class="column-notes" title="@asset.Notes">@asset.Notes</td>
+                                 <td class="column-notes editable-cell" data-field="Notes" data-id="@asset.Id" title="@asset.Notes">@asset.Notes</td>
                                  <td class="column-createdAt" title="@asset.CreatedAt.ToString("MM/dd/yyyy HH:mm")">@asset.CreatedAt.ToString("MM/dd/yyyy")</td>
                                  <td class="column-createdBy" title="@asset.CreatedBy">@asset.CreatedBy</td>
                                 <td class="column-actions">
@@ -1865,5 +1945,299 @@
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+    }
+    
+    // Inline editing functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeInlineEditing();
+    });
+    
+    function initializeInlineEditing() {
+        const editableCells = document.querySelectorAll('.editable-cell');
+        
+        editableCells.forEach(cell => {
+            cell.addEventListener('dblclick', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (cell.classList.contains('editing')) return;
+                
+                const field = cell.dataset.field;
+                const assetId = cell.dataset.id;
+                const currentValue = getCellValue(cell);
+                
+                startEditing(cell, field, assetId, currentValue);
+            });
+        });
+    }
+    
+    function getCellValue(cell) {
+        // Handle different cell content types
+        const badge = cell.querySelector('.badge');
+        if (badge) {
+            return badge.textContent.trim();
+        }
+        
+        const strong = cell.querySelector('strong');
+        if (strong) {
+            return strong.textContent.trim();
+        }
+        
+        return cell.textContent.trim();
+    }
+    
+    function startEditing(cell, field, assetId, currentValue) {
+        cell.classList.add('editing');
+        
+        let inputElement;
+        
+        // Create appropriate input element based on field type
+        if (field === 'Status') {
+            inputElement = createStatusDropdown(currentValue);
+        } else if (field === 'Location') {
+            inputElement = createLocationDropdown(currentValue);
+        } else if (field === 'Category') {
+            inputElement = createCategoryDropdown(currentValue);
+        } else {
+            inputElement = createTextInput(currentValue);
+        }
+        
+        // Clear cell content and add input
+        cell.innerHTML = '';
+        cell.appendChild(inputElement);
+        
+        // Focus and select text
+        inputElement.focus();
+        if (inputElement.type === 'text') {
+            inputElement.select();
+        }
+        
+        // Handle save on Enter or blur
+        inputElement.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                saveEdit(cell, field, assetId, inputElement.value);
+            } else if (e.key === 'Escape') {
+                cancelEdit(cell, currentValue);
+            }
+        });
+        
+        inputElement.addEventListener('blur', function() {
+            setTimeout(() => {
+                if (cell.classList.contains('editing')) {
+                    saveEdit(cell, field, assetId, inputElement.value);
+                }
+            }, 100);
+        });
+    }
+    
+    function createTextInput(value) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = value;
+        input.className = 'form-control form-control-sm';
+        return input;
+    }
+    
+    function createStatusDropdown(currentValue) {
+        const select = document.createElement('select');
+        select.className = 'status-dropdown form-select form-select-sm';
+        
+        const statuses = ['Active', 'Inactive', 'Maintenance', 'Retired'];
+        statuses.forEach(status => {
+            const option = document.createElement('option');
+            option.value = status;
+            option.textContent = status;
+            if (status === currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+        
+        return select;
+    }
+    
+    function createLocationDropdown(currentValue) {
+        const select = document.createElement('select');
+        select.className = 'location-dropdown form-select form-select-sm';
+        
+        const locations = ['LIC', 'BROOKLYN', 'BRONX', 'STATEN ISLAND', '66JOHN'];
+        locations.forEach(location => {
+            const option = document.createElement('option');
+            option.value = location;
+            option.textContent = location;
+            if (location === currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+        
+        return select;
+    }
+    
+    function createCategoryDropdown(currentValue) {
+        const select = document.createElement('select');
+        select.className = 'form-select form-select-sm';
+        
+        const categories = ['Desktop', 'Laptop', 'Monitor', 'Printer', 'Phone', 'Tablet', 'Server', 'Network', 'Other'];
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            if (category === currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+        
+        return select;
+    }
+    
+    function saveEdit(cell, field, assetId, newValue) {
+        // Show loading state
+        cell.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+        
+        // Send AJAX request
+        fetch('/Assets/UpdateField', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+            },
+            body: new URLSearchParams({
+                id: assetId,
+                field: field,
+                value: newValue
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateCellContent(cell, field, newValue);
+                showToast('Success', 'Field updated successfully', 'success');
+            } else {
+                // Restore original content on error
+                const originalValue = cell.dataset.originalValue || '';
+                updateCellContent(cell, field, originalValue);
+                showToast('Error', data.message || 'Failed to update field', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating field:', error);
+            const originalValue = cell.dataset.originalValue || '';
+            updateCellContent(cell, field, originalValue);
+            showToast('Error', 'Network error occurred', 'error');
+        })
+        .finally(() => {
+            cell.classList.remove('editing');
+        });
+    }
+    
+    function cancelEdit(cell, originalValue) {
+        updateCellContent(cell, cell.dataset.field, originalValue);
+        cell.classList.remove('editing');
+    }
+    
+    function updateCellContent(cell, field, value) {
+        if (field === 'Status') {
+            const statusClass = getStatusClass(value);
+            cell.innerHTML = `<span class="badge ${statusClass}">${value}</span>`;
+        } else if (field === 'AssetTag') {
+            cell.innerHTML = `<strong>${value}</strong>`;
+        } else if (field === 'Category') {
+            cell.innerHTML = `<span class="badge bg-secondary">${value}</span>`;
+        } else {
+            cell.textContent = value;
+        }
+        
+        // Update title attribute
+        cell.title = value;
+    }
+    
+    function getStatusClass(status) {
+        switch (status?.toLowerCase()) {
+            case 'active': return 'bg-success';
+            case 'inactive': return 'bg-secondary';
+            case 'maintenance': return 'bg-warning';
+            case 'retired': return 'bg-danger';
+            default: return 'bg-info';
+        }
+    }
+    
+    function showToast(title, message, type) {
+        // Create toast notification
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <strong>${title}:</strong> ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        // Add to page if toast container doesn't exist
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '9999';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.appendChild(toast);
+        
+        // Show toast
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // Remove toast after it's hidden
+        toast.addEventListener('hidden.bs.toast', function() {
+            toast.remove();
+        });
+    }
+    
+    function confirmDeleteAll() {
+        if (confirm('⚠️ WARNING: This will permanently delete ALL assets and related records (history, requests).\n\nThis action cannot be undone!\n\nAre you absolutely sure you want to continue?')) {
+            if (confirm('FINAL CONFIRMATION: You are about to delete ALL assets.\n\nType "DELETE ALL" to confirm:')) {
+                const input = prompt('Type "DELETE ALL" to confirm deletion:');
+                if (input === 'DELETE ALL') {
+                    deleteAllAssets();
+                } else {
+                    alert('Deletion cancelled. You must type "DELETE ALL" exactly.');
+                }
+            }
+        }
+    }
+    
+    function deleteAllAssets() {
+        fetch('/Assets/DeleteAll', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Success', data.message, 'success');
+                // Reload the page after a short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                showToast('Error', data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting all assets:', error);
+            showToast('Error', 'Network error occurred', 'error');
+        });
     }
 </script>
