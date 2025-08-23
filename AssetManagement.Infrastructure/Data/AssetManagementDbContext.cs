@@ -15,6 +15,9 @@ public class AssetManagementDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Floor> Floors { get; set; }
     public DbSet<AssetRequest> AssetRequests { get; set; }
     public DbSet<AssetHistory> AssetHistory { get; set; }
+    public DbSet<AssetTransfer> AssetTransfers { get; set; }
+    public DbSet<SalvageBatch> SalvageBatches { get; set; }
+    public DbSet<AssetEvent> AssetEvents { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -30,9 +33,15 @@ public class AssetManagementDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.ServiceTag);
             entity.HasIndex(e => e.IpAddress);
             entity.HasIndex(e => e.MacAddress);
+            entity.HasIndex(e => e.LifecycleState);
+            entity.HasIndex(e => e.CurrentSite);
+            entity.HasIndex(e => e.SalvageBatchId);
             
             // Configure decimal properties
             entity.Property(e => e.PurchasePrice).HasColumnType("decimal(18,2)");
+            
+            // Configure enum
+            entity.Property(e => e.LifecycleState).HasConversion<string>();
             
             // Relationships
             entity.HasOne(e => e.Building)
@@ -48,6 +57,11 @@ public class AssetManagementDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(e => e.AssignedUser)
                 .WithMany(e => e.AssignedAssets)
                 .HasForeignKey(e => e.AssignedUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+                
+            entity.HasOne(e => e.SalvageBatch)
+                .WithMany(e => e.Assets)
+                .HasForeignKey(e => e.SalvageBatchId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -122,6 +136,65 @@ public class AssetManagementDbContext : IdentityDbContext<ApplicationUser>
                 .WithMany(e => e.AssetHistory)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // AssetTransfer configuration
+        builder.Entity<AssetTransfer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.AssetTag).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.FromSite).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ToSite).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.State).IsRequired().HasMaxLength(20);
+            
+            // Indexes
+            entity.HasIndex(e => e.AssetTag);
+            entity.HasIndex(e => e.TrackingNumber);
+            entity.HasIndex(e => e.State);
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => new { e.AssetTag, e.CreatedAt });
+            
+            // Relationships
+            entity.HasOne(e => e.Asset)
+                .WithMany(e => e.AssetTransfers)
+                .HasForeignKey(e => e.AssetTag)
+                .HasPrincipalKey(e => e.AssetTag)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // SalvageBatch configuration
+        builder.Entity<SalvageBatch>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BatchCode).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.PickupVendor).IsRequired().HasMaxLength(100);
+            
+            // Indexes
+            entity.HasIndex(e => e.BatchCode).IsUnique();
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.PickupVendor);
+        });
+
+        // AssetEvent configuration
+        builder.Entity<AssetEvent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.AssetTag).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Type).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.DataJson).HasMaxLength(4000);
+            
+            // Indexes
+            entity.HasIndex(e => e.AssetTag);
+            entity.HasIndex(e => e.Type);
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => new { e.AssetTag, e.CreatedAt });
+            
+            // Relationships
+            entity.HasOne(e => e.Asset)
+                .WithMany(e => e.AssetEvents)
+                .HasForeignKey(e => e.AssetTag)
+                .HasPrincipalKey(e => e.AssetTag)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // ApplicationUser configuration

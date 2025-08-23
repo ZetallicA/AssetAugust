@@ -58,7 +58,11 @@ builder.Services.AddHealthChecks()
 
 // Register services
 builder.Services.AddScoped<IExcelImportService, ExcelImportService>();
+builder.Services.AddScoped<IAssetSearchService, AssetSearchService>();
 builder.Services.AddScoped<DatabaseSeeder>();
+builder.Services.AddScoped<AssetLifecycleService>();
+builder.Services.AddScoped<TransferService>();
+builder.Services.AddScoped<SalvageService>();
 
 var app = builder.Build();
 

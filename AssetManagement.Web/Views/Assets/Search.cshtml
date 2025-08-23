@@ -1,0 +1,525 @@
+@model AssetManagement.Domain.Models.AssetSearchResult
+@{
+    ViewData["Title"] = "Search API";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-search"></i> Search API
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Search Form -->
+                    <form id="searchForm" class="mb-4">
+                        <div class="row g-3">
+                            <!-- Main Search -->
+                            <div class="col-md-8">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" 
+                                           class="form-control form-control-lg" 
+                                           id="searchQuery" 
+                                           name="query" 
+                                           placeholder="Search assets... (use quotes for exact phrases: &quot;Courtroom 04 - A&quot;)"
+                                           value="@Context.Request.Query["query"]"
+                                           autocomplete="off">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="bi bi-search"></i> Search
+                                    </button>
+                                </div>
+                                <div class="form-text">
+                                    <small>
+                                        <i class="bi bi-info-circle"></i> 
+                                        Search across all fields. Use quotes for exact phrases. 
+                                        Press <kbd>/</kbd> to focus search.
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <!-- Advanced Filters Toggle -->
+                            <div class="col-md-4">
+                                <button type="button" 
+                                        class="btn btn-outline-secondary" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#advancedFilters">
+                                    <i class="bi bi-funnel"></i> Advanced Filters
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Filters -->
+                        <div class="collapse mt-3" id="advancedFilters">
+                            <div class="card card-body bg-light">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label for="categoryFilter" class="form-label">Category</label>
+                                        <select class="form-select" id="categoryFilter" name="category">
+                                            <option value="">All Categories</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="locationFilter" class="form-label">Location</label>
+                                        <select class="form-select" id="locationFilter" name="location">
+                                            <option value="">All Locations</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="floorFilter" class="form-label">Floor</label>
+                                        <select class="form-select" id="floorFilter" name="floor">
+                                            <option value="">All Floors</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="statusFilter" class="form-label">Status</label>
+                                        <select class="form-select" id="statusFilter" name="status">
+                                            <option value="">All Statuses</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="vendorFilter" class="form-label">Vendor</label>
+                                        <select class="form-select" id="vendorFilter" name="vendor">
+                                            <option value="">All Vendors</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="assignedFilter" class="form-label">Assignment</label>
+                                        <select class="form-select" id="assignedFilter" name="unassignedOnly">
+                                            <option value="false">All Assets</option>
+                                            <option value="true">Unassigned Only</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="createdFrom" class="form-label">Created From</label>
+                                        <input type="date" class="form-control" id="createdFrom" name="createdFrom">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="createdTo" class="form-label">Created To</label>
+                                        <input type="date" class="form-control" id="createdTo" name="createdTo">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Active Filters -->
+                    <div id="activeFilters" class="mb-3" style="display: none;">
+                        <h6>Active Filters:</h6>
+                        <div id="filterChips" class="d-flex flex-wrap gap-2"></div>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="clearAllFilters()">
+                            <i class="bi bi-x-circle"></i> Clear All
+                        </button>
+                    </div>
+
+                    <!-- Search Results -->
+                    <div id="searchResults">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span id="resultCount" class="badge bg-secondary">No results</span>
+                                <span id="searchTime" class="text-muted ms-2"></span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <select class="form-select form-select-sm" id="pageSize" style="width: auto;">
+                                    <option value="25">25 per page</option>
+                                    <option value="50" selected>50 per page</option>
+                                    <option value="100">100 per page</option>
+                                </select>
+                                <select class="form-select form-select-sm" id="sortBy" style="width: auto;">
+                                    <option value="assettag">Asset Tag</option>
+                                    <option value="servicetag">Service Tag</option>
+                                    <option value="category">Category</option>
+                                    <option value="location">Location</option>
+                                    <option value="status">Status</option>
+                                    <option value="assigneduser">Assigned User</option>
+                                    <option value="createdat">Created Date</option>
+                                </select>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="toggleSortDirection()">
+                                    <i class="bi bi-sort-down" id="sortIcon"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Results Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="resultsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Asset Tag</th>
+                                        <th>Service Tag</th>
+                                        <th>Category</th>
+                                        <th>Location</th>
+                                        <th>Floor</th>
+                                        <th>Desk</th>
+                                        <th>Status</th>
+                                        <th>Assigned User</th>
+                                        <th>Department</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resultsBody">
+                                    <tr>
+                                        <td colspan="10" class="text-center text-muted">
+                                            <i class="bi bi-search"></i> Enter a search term to begin
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <nav id="pagination" style="display: none;">
+                            <ul class="pagination justify-content-center" id="paginationList"></ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="position-fixed top-50 start-50 translate-middle" style="display: none; z-index: 9999;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentPage = 1;
+        let totalPages = 0;
+        let sortDescending = false;
+        let searchTimeout;
+
+        // Initialize
+        $(document).ready(function() {
+            loadFilterOptions();
+            setupEventListeners();
+            loadInitialResults();
+        });
+
+        function setupEventListeners() {
+            // Search input with debouncing
+            $('#searchQuery').on('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    currentPage = 1;
+                    performSearch();
+                }, 300);
+            });
+
+            // Form submission
+            $('#searchForm').on('submit', function(e) {
+                e.preventDefault();
+                currentPage = 1;
+                performSearch();
+            });
+
+            // Filter changes
+            $('.form-select, .form-control').on('change', function() {
+                currentPage = 1;
+                performSearch();
+            });
+
+            // Page size change
+            $('#pageSize').on('change', function() {
+                currentPage = 1;
+                performSearch();
+            });
+
+            // Sort change
+            $('#sortBy').on('change', function() {
+                performSearch();
+            });
+
+            // Keyboard shortcuts
+            $(document).on('keydown', function(e) {
+                if (e.key === '/' && !$(e.target).is('input, textarea')) {
+                    e.preventDefault();
+                    $('#searchQuery').focus();
+                }
+            });
+        }
+
+        function loadFilterOptions() {
+            // Load categories
+            $.get('/api/assets/search', { pageSize: 1000 })
+                .done(function(data) {
+                    const categories = [...new Set(data.items.map(item => item.category).filter(Boolean))];
+                    const locations = [...new Set(data.items.map(item => item.location).filter(Boolean))];
+                    const floors = [...new Set(data.items.map(item => item.floor).filter(Boolean))];
+                    const statuses = [...new Set(data.items.map(item => item.status).filter(Boolean))];
+                    const vendors = [...new Set(data.items.map(item => item.vendor).filter(Boolean))];
+
+                    populateSelect('#categoryFilter', categories);
+                    populateSelect('#locationFilter', locations);
+                    populateSelect('#floorFilter', floors);
+                    populateSelect('#statusFilter', statuses);
+                    populateSelect('#vendorFilter', vendors);
+                });
+        }
+
+        function populateSelect(selector, options) {
+            const select = $(selector);
+            options.sort().forEach(option => {
+                select.append(`<option value="${option}">${option}</option>`);
+            });
+        }
+
+        function performSearch() {
+            const query = $('#searchQuery').val();
+            const pageSize = $('#pageSize').val();
+            const sortBy = $('#sortBy').val();
+            
+            const params = {
+                query: query,
+                category: $('#categoryFilter').val(),
+                location: $('#locationFilter').val(),
+                floor: $('#floorFilter').val(),
+                status: $('#statusFilter').val(),
+                vendor: $('#vendorFilter').val(),
+                unassignedOnly: $('#assignedFilter').val() === 'true',
+                createdFrom: $('#createdFrom').val(),
+                createdTo: $('#createdTo').val(),
+                page: currentPage,
+                pageSize: pageSize,
+                sortBy: sortBy,
+                sortDescending: sortDescending
+            };
+
+            showLoading(true);
+            
+            $.get('/api/assets/search', params)
+                .done(function(data) {
+                    displayResults(data);
+                    updateActiveFilters(params);
+                })
+                .fail(function(xhr) {
+                    showError('Search failed: ' + (xhr.responseJSON?.message || xhr.statusText));
+                })
+                .always(function() {
+                    showLoading(false);
+                });
+        }
+
+        function displayResults(data) {
+            const tbody = $('#resultsBody');
+            tbody.empty();
+
+            if (data.items.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="10" class="text-center text-muted">
+                            <i class="bi bi-search"></i> No results found
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            data.items.forEach(item => {
+                const row = `
+                    <tr>
+                        <td>${highlightField(item.assetTag, item.highlights.assetTag)}</td>
+                        <td>${highlightField(item.serviceTag, item.highlights.serviceTag)}</td>
+                        <td>${highlightField(item.category, item.highlights.category)}</td>
+                        <td>${highlightField(item.location, item.highlights.location)}</td>
+                        <td>${highlightField(item.floor, item.highlights.floor)}</td>
+                        <td>${highlightField(item.desk, item.highlights.desk)}</td>
+                        <td><span class="badge bg-${getStatusColor(item.status)}">${item.status || 'N/A'}</span></td>
+                        <td>${highlightField(item.assignedUserName, item.highlights.assignedUserName)}</td>
+                        <td>${highlightField(item.department, item.highlights.department)}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/Assets/Details/${item.id}" class="btn btn-outline-primary" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="/Assets/Edit/${item.id}" class="btn btn-outline-secondary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+
+            // Update result count and time
+            $('#resultCount').text(`${data.total} result${data.total !== 1 ? 's' : ''}`);
+            $('#searchTime').text(`in ${data.searchTimeMs}ms ${data.usedFullTextSearch ? '(FTS)' : '(LIKE)'}`);
+
+            // Update pagination
+            totalPages = data.totalPages;
+            updatePagination();
+        }
+
+        function highlightField(value, highlighted) {
+            if (!value) return 'N/A';
+            return highlighted || value;
+        }
+
+        function getStatusColor(status) {
+            if (!status) return 'secondary';
+            switch (status.toLowerCase()) {
+                case 'active': return 'success';
+                case 'inactive': return 'danger';
+                case 'maintenance': return 'warning';
+                case 'retired': return 'dark';
+                default: return 'secondary';
+            }
+        }
+
+        function updatePagination() {
+            const pagination = $('#pagination');
+            const paginationList = $('#paginationList');
+            
+            if (totalPages <= 1) {
+                pagination.hide();
+                return;
+            }
+
+            paginationList.empty();
+            pagination.show();
+
+            // Previous button
+            const prevDisabled = currentPage === 1 ? 'disabled' : '';
+            paginationList.append(`
+                <li class="page-item ${prevDisabled}">
+                    <a class="page-link" href="#" onclick="goToPage(${currentPage - 1})">Previous</a>
+                </li>
+            `);
+
+            // Page numbers
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+
+            for (let i = startPage; i <= endPage; i++) {
+                const active = i === currentPage ? 'active' : '';
+                paginationList.append(`
+                    <li class="page-item ${active}">
+                        <a class="page-link" href="#" onclick="goToPage(${i})">${i}</a>
+                    </li>
+                `);
+            }
+
+            // Next button
+            const nextDisabled = currentPage === totalPages ? 'disabled' : '';
+            paginationList.append(`
+                <li class="page-item ${nextDisabled}">
+                    <a class="page-link" href="#" onclick="goToPage(${currentPage + 1})">Next</a>
+                </li>
+            `);
+        }
+
+        function goToPage(page) {
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                performSearch();
+            }
+        }
+
+        function updateActiveFilters(params) {
+            const chips = [];
+            
+            if (params.query) chips.push({ label: `Search: "${params.query}"`, key: 'query' });
+            if (params.category) chips.push({ label: `Category: ${params.category}`, key: 'category' });
+            if (params.location) chips.push({ label: `Location: ${params.location}`, key: 'location' });
+            if (params.floor) chips.push({ label: `Floor: ${params.floor}`, key: 'floor' });
+            if (params.status) chips.push({ label: `Status: ${params.status}`, key: 'status' });
+            if (params.vendor) chips.push({ label: `Vendor: ${params.vendor}`, key: 'vendor' });
+            if (params.unassignedOnly) chips.push({ label: 'Unassigned Only', key: 'unassignedOnly' });
+            if (params.createdFrom) chips.push({ label: `Created From: ${params.createdFrom}`, key: 'createdFrom' });
+            if (params.createdTo) chips.push({ label: `Created To: ${params.createdTo}`, key: 'createdTo' });
+
+            const filterChips = $('#filterChips');
+            filterChips.empty();
+
+            chips.forEach(chip => {
+                filterChips.append(`
+                    <span class="badge bg-primary">
+                        ${chip.label}
+                        <button type="button" class="btn-close btn-close-white ms-1" 
+                                onclick="removeFilter('${chip.key}')" style="font-size: 0.5em;"></button>
+                    </span>
+                `);
+            });
+
+            $('#activeFilters').toggle(chips.length > 0);
+        }
+
+        function removeFilter(key) {
+            switch (key) {
+                case 'query':
+                    $('#searchQuery').val('');
+                    break;
+                case 'category':
+                    $('#categoryFilter').val('');
+                    break;
+                case 'location':
+                    $('#locationFilter').val('');
+                    break;
+                case 'floor':
+                    $('#floorFilter').val('');
+                    break;
+                case 'status':
+                    $('#statusFilter').val('');
+                    break;
+                case 'vendor':
+                    $('#vendorFilter').val('');
+                    break;
+                case 'unassignedOnly':
+                    $('#assignedFilter').val('false');
+                    break;
+                case 'createdFrom':
+                    $('#createdFrom').val('');
+                    break;
+                case 'createdTo':
+                    $('#createdTo').val('');
+                    break;
+            }
+            performSearch();
+        }
+
+        function clearAllFilters() {
+            $('#searchQuery').val('');
+            $('#categoryFilter').val('');
+            $('#locationFilter').val('');
+            $('#floorFilter').val('');
+            $('#statusFilter').val('');
+            $('#vendorFilter').val('');
+            $('#assignedFilter').val('false');
+            $('#createdFrom').val('');
+            $('#createdTo').val('');
+            performSearch();
+        }
+
+        function toggleSortDirection() {
+            sortDescending = !sortDescending;
+            $('#sortIcon').toggleClass('bi-sort-down bi-sort-up');
+            performSearch();
+        }
+
+        function showLoading(show) {
+            $('#loadingSpinner').toggle(show);
+        }
+
+        function showError(message) {
+            // You can implement a toast notification here
+            alert(message);
+        }
+
+        function loadInitialResults() {
+            // Load initial results if there's a query in the URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('query')) {
+                performSearch();
+            }
+        }
+    </script>
+}
+

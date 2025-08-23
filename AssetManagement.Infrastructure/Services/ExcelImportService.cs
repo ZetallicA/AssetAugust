@@ -17,6 +17,17 @@ public class ExcelImportService : IExcelImportService
     private readonly AssetManagementDbContext _context;
     private readonly ILogger<ExcelImportService> _logger;
 
+    // Header aliases for flexible column mapping
+    private static readonly Dictionary<string, string> HeaderAliases = 
+        new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Supervisor", "Manager" },
+        { "Mgr", "Manager" },
+        { "Warranty Expiration", "Warranty End Date" },
+        { "Warranty Exp.", "Warranty End Date" },
+        { "Warranty End", "Warranty End Date" }
+    };
+
     public ExcelImportService(AssetManagementDbContext context, ILogger<ExcelImportService> logger)
     {
         _context = context;
@@ -95,7 +106,16 @@ public class ExcelImportService : IExcelImportService
                         WarrantyEndDate = GetDateTimeValueByColumn(row, columnMapping, "Warranty End Date"),
                         Notes = GetCellValueByColumn(row, columnMapping, "Notes"),
                         CreatedAt = DateTime.UtcNow,
-                        CreatedBy = importedBy
+                        CreatedBy = importedBy,
+                        // Set lifecycle state based on import data
+                        LifecycleState = DetermineLifecycleStateFromImport(
+                            GetCellValueByColumn(row, columnMapping, "Status"),
+                            GetCellValueByColumn(row, columnMapping, "Category"),
+                            GetCellValueByColumn(row, columnMapping, "Location"),
+                            GetCellValueByColumn(row, columnMapping, "Desk")),
+                        CurrentSite = GetCellValueByColumn(row, columnMapping, "Location"),
+                        CurrentStorageLocation = GetCellValueByColumn(row, columnMapping, "Location"),
+                        CurrentDesk = GetCellValueByColumn(row, columnMapping, "Desk")
                     };
 
                     // Debug logging for Extension and OS Version values
@@ -437,11 +457,40 @@ public class ExcelImportService : IExcelImportService
     {
         var cell = row.Cell(column);
         if (cell.IsEmpty()) return null;
-        
-        if (DateTime.TryParse(cell.GetString(), out var value))
-            return value;
-        
-        return null;
+
+        try
+        {
+            // Try to get as DateTime first (handles Excel date formats)
+            return cell.GetDateTime();
+        }
+        catch
+        {
+            // Try to parse as text
+            var textValue = cell.GetString()?.Trim();
+            if (string.IsNullOrEmpty(textValue)) return null;
+
+            // Try parsing as text date
+            if (DateTime.TryParse(textValue, out var parsedDate))
+            {
+                return parsedDate;
+            }
+
+            // Try parsing as Excel serial number (OADate)
+            if (double.TryParse(textValue, out var oaDate))
+            {
+                try
+                {
+                    return DateTime.FromOADate(oaDate);
+                }
+                catch
+                {
+                    // Invalid OADate
+                    return null;
+                }
+            }
+
+            return null;
+        }
     }
 
     private static Dictionary<string, object> GetRowData(IXLRow row, Dictionary<string, int> columnMapping)
@@ -459,7 +508,7 @@ public class ExcelImportService : IExcelImportService
 
     private Dictionary<string, int> GetColumnMapping(IXLRow headerRow)
     {
-        var columnMapping = new Dictionary<string, int>();
+        var columnMapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var headers = headerRow.CellsUsed().Select(c => c.GetString().Trim()).ToList();
         var usedColumns = new HashSet<int>();
 
@@ -476,7 +525,7 @@ public class ExcelImportService : IExcelImportService
             "Notes", "Created At", "Created By"
         };
 
-        // First pass: Try exact matches
+        // First pass: Try exact matches and aliases
         for (int i = 0; i < expectedHeaders.Length; i++)
         {
             var header = expectedHeaders[i];
@@ -486,6 +535,23 @@ public class ExcelImportService : IExcelImportService
                 columnMapping[header] = foundIndex + 1;
                 usedColumns.Add(foundIndex);
                 _logger.LogDebug("Found exact header '{Header}' at column {ColumnIndex}", header, foundIndex + 1);
+            }
+            else
+            {
+                // Try aliases for this header
+                var aliases = HeaderAliases.Where(kvp => kvp.Value.Equals(header, StringComparison.OrdinalIgnoreCase))
+                                         .Select(kvp => kvp.Key);
+                foreach (var alias in aliases)
+                {
+                    var aliasIndex = headers.IndexOf(alias);
+                    if (aliasIndex != -1 && !usedColumns.Contains(aliasIndex))
+                    {
+                        columnMapping[header] = aliasIndex + 1;
+                        usedColumns.Add(aliasIndex);
+                        _logger.LogDebug("Found alias '{Alias}' for header '{Header}' at column {ColumnIndex}", alias, header, aliasIndex + 1);
+                        break;
+                    }
+                }
             }
         }
 
@@ -621,6 +687,33 @@ public class ExcelImportService : IExcelImportService
         return null;
     }
 
+    private AssetLifecycleState DetermineLifecycleStateFromImport(string? status, string? category, string? location, string? desk)
+    {
+        // If status/category indicates salvage, set to Salvaged
+        if (!string.IsNullOrEmpty(status) && status.Equals("Salvage", StringComparison.OrdinalIgnoreCase) ||
+            !string.IsNullOrEmpty(category) && category.Equals("Salvage", StringComparison.OrdinalIgnoreCase))
+        {
+            return AssetLifecycleState.Salvaged;
+        }
+
+        // If desk is present, asset is deployed
+        if (!string.IsNullOrEmpty(desk))
+        {
+            return AssetLifecycleState.Deployed;
+        }
+
+        // If location indicates storage and no desk, asset is in storage
+        if (!string.IsNullOrEmpty(location) && 
+            (location.Contains("Storage", StringComparison.OrdinalIgnoreCase) || 
+             location.Contains("LIC", StringComparison.OrdinalIgnoreCase) ||
+             location.Contains("66JOHN", StringComparison.OrdinalIgnoreCase)))
+        {
+            return AssetLifecycleState.InStorage;
+        }
+
+        // Default to InStorage
+        return AssetLifecycleState.InStorage;
+    }
 }
 
 public class ImportResult

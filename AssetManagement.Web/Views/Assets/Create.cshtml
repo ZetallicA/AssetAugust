@@ -151,11 +151,12 @@
                                         <label asp-for="Location" class="form-label">Location</label>
                                         <select asp-for="Location" class="form-select" id="locationSelect">
                                             <option value="">Select Location</option>
+                                            <option value="100CHURCH">100 Church Street (Manhattan)</option>
                                             <option value="66JOHN">66 John Street (Manhattan)</option>
-                                            <option value="9BOND">9 Bond Street (Brooklyn)</option>
-                                            <option value="260E161">260 E. 161 Street (Bronx)</option>
-                                            <option value="310047">31-00 47 Avenue (Queens)</option>
-                                            <option value="350STMARKS">350 St. Marks Place (Staten Island)</option>
+                                            <option value="BROOKLYN">9 Bond Street (Brooklyn)</option>
+                                            <option value="BRONX">260 E. 161 Street (Bronx)</option>
+                                            <option value="LIC">31-00 47 Avenue (Long Island City)</option>
+                                            <option value="STATEN ISLAND">350 St. Marks Place (Staten Island)</option>
                                         </select>
                                         <span asp-validation-for="Location" class="text-danger"></span>
                                     </div>
@@ -177,7 +178,7 @@
 
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label asp-for="AssignedUserName" class="form-label">Assigned User Name</label>
+                                        <label asp-for="AssignedUserName" class="form-label">Assigned Person</label>
                                         <input asp-for="AssignedUserName" class="form-control">
                                         <span asp-validation-for="AssignedUserName" class="text-danger"></span>
                                     </div>
@@ -424,11 +425,12 @@
         
         // Floor data for each location
         const floorData = {
-            '66JOHN': ['Floor 10', 'Floor 11'],
-            '9BOND': ['Floor 6', 'Floor 7'],
-            '260E161': ['Floor 6'],
-            '310047': ['Floor 3', 'Floor 4'],
-            '350STMARKS': ['Main Floor']
+            '100CHURCH': ['12th Floor'],
+            '66JOHN': ['9th Floor', '10th Floor', '11th Floor'],
+            'BROOKLYN': ['6th Floor', '7th Floor'],
+            'BRONX': ['6th Floor'],
+            'LIC': ['3rd Floor', '4th Floor'],
+            'STATEN ISLAND': ['Main Floor']
         };
 
         // Initialize the wizard

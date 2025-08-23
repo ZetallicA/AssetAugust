@@ -40,6 +40,9 @@ public class DatabaseSeeder
             // Seed sample equipment categories
             await SeedEquipmentCategoriesAsync();
 
+            // Add 9th floor to 66 John Street if it doesn't exist
+            await Add9thFloorTo66JohnStreetAsync();
+
             _logger.LogInformation("Database seeding completed successfully");
         }
         catch (Exception ex)
@@ -214,7 +217,7 @@ public class DatabaseSeeder
                 var floorNumbers = building.BuildingCode switch
                 {
                     "100CHURCH" => new[] { 12 }, // 100 Church Street - 12th Floor
-                    "66JOHN" => new[] { 10, 11 }, // 66 John Street - 10th and 11th Floors
+                    "66JOHN" => new[] { 9, 10, 11 }, // 66 John Street - 9th, 10th and 11th Floors
                     "BROOKLYN" => new[] { 6, 7 }, // 9 Bond Street - 6th and 7th Floors
                     "BRONX" => new[] { 6 }, // 260 E. 161 Street - 6th Floor
                     "LIC" => new[] { 3, 4 }, // 31-00 47 Avenue - 3rd and 4th Floor
@@ -247,5 +250,51 @@ public class DatabaseSeeder
         // This method can be used to seed equipment categories if needed
         // For now, we'll rely on the Excel import to populate categories
         _logger.LogInformation("Equipment categories will be populated through Excel imports");
+    }
+
+    private async Task Add9thFloorTo66JohnStreetAsync()
+    {
+        try
+        {
+            // Find the 66 John Street building
+            var building = await _context.Buildings
+                .Include(b => b.Floors)
+                .FirstOrDefaultAsync(b => b.BuildingCode == "66JOHN");
+
+            if (building == null)
+            {
+                _logger.LogWarning("66 John Street building not found!");
+                return;
+            }
+
+            // Check if 9th floor already exists
+            var existingFloor = building.Floors.FirstOrDefault(f => f.FloorNumber == "9");
+            if (existingFloor != null)
+            {
+                _logger.LogInformation("9th Floor already exists for 66 John Street building");
+                return;
+            }
+
+            // Add the 9th floor
+            var newFloor = new Floor
+            {
+                Name = "9th Floor",
+                FloorNumber = "9",
+                Description = "66 John Street - 9th Floor",
+                BuildingId = building.Id,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "System"
+            };
+
+            await _context.Floors.AddAsync(newFloor);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Successfully added 9th Floor to 66 John Street building");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding 9th floor to 66 John Street building");
+        }
     }
 }

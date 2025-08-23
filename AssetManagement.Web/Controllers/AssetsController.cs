@@ -1,4 +1,5 @@
 using AssetManagement.Domain.Entities;
+using AssetManagement.Domain.Models;
 using AssetManagement.Infrastructure.Data;
 using AssetManagement.Infrastructure.Services;
 using AssetManagement.Web.Models;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using ClosedXML.Excel;
 using System.IO;
+using AssetManagement.Web.Models;
 
 namespace AssetManagement.Web.Controllers;
 
@@ -16,20 +18,37 @@ public class AssetsController : Controller
 {
     private readonly AssetManagementDbContext _context;
     private readonly IExcelImportService _excelImportService;
+    private readonly IAssetSearchService _searchService;
+    private readonly AssetLifecycleService _lifecycleService;
+    private readonly TransferService _transferService;
+    private readonly SalvageService _salvageService;
     private readonly ILogger<AssetsController> _logger;
 
     public AssetsController(
         AssetManagementDbContext context,
         IExcelImportService excelImportService,
+        IAssetSearchService searchService,
+        AssetLifecycleService lifecycleService,
+        TransferService transferService,
+        SalvageService salvageService,
         ILogger<AssetsController> logger)
     {
         _context = context;
         _excelImportService = excelImportService;
+        _searchService = searchService;
+        _lifecycleService = lifecycleService;
+        _transferService = transferService;
+        _salvageService = salvageService;
         _logger = logger;
     }
 
     // GET: Assets
-    public async Task<IActionResult> Index(string searchTerm, string sortOrder, int page = 1, int pageSize = 25)
+    public async Task<IActionResult> Index(string searchTerm, string sortOrder, int page = 1, int pageSize = 25,
+        string? filterAssetTag = null, string? filterSerialNumber = null, string? filterServiceTag = null,
+        string? filterManufacturer = null, string? filterModel = null, string? filterCategory = null,
+        string? filterNetName = null, string? filterAssignedUser = null, string? filterManager = null, string? filterDepartment = null,
+        string? filterLocation = null, string? filterFloor = null, string? filterDesk = null, string? filterStatus = null,
+        string? filterVendor = null, string? filterWarrantyEnd = null)
     {
         ViewData["CurrentSort"] = sortOrder;
         ViewData["AssetTagSortParm"] = String.IsNullOrEmpty(sortOrder) ? "assetTag_desc" : "";
@@ -48,6 +67,7 @@ public class AssetsController : Controller
         ViewData["FloorSortParm"] = sortOrder == "floor" ? "floor_desc" : "floor";
         ViewData["DeskSortParm"] = sortOrder == "desk" ? "desk_desc" : "desk";
         ViewData["StatusSortParm"] = sortOrder == "status" ? "status_desc" : "status";
+        ViewData["LifecycleSortParm"] = sortOrder == "lifecycle" ? "lifecycle_desc" : "lifecycle";
         ViewData["IpAddressSortParm"] = sortOrder == "ipAddress" ? "ipAddress_desc" : "ipAddress";
         ViewData["MacAddressSortParm"] = sortOrder == "macAddress" ? "macAddress_desc" : "macAddress";
         ViewData["WallPortSortParm"] = sortOrder == "wallPort" ? "wallPort_desc" : "wallPort";
@@ -80,14 +100,141 @@ public class AssetsController : Controller
         if (!String.IsNullOrEmpty(searchTerm))
         {
             assetsQuery = assetsQuery.Where(a => 
-                a.AssetTag.Contains(searchTerm) ||
-                a.SerialNumber.Contains(searchTerm) ||
-                a.Manufacturer.Contains(searchTerm) ||
-                a.Model.Contains(searchTerm) ||
-                a.AssignedUserName.Contains(searchTerm) ||
-                a.Department.Contains(searchTerm) ||
-                a.Location.Contains(searchTerm)
+                (a.AssetTag != null && a.AssetTag.Contains(searchTerm)) ||
+                (a.SerialNumber != null && a.SerialNumber.Contains(searchTerm)) ||
+                (a.ServiceTag != null && a.ServiceTag.Contains(searchTerm)) ||
+                (a.Manufacturer != null && a.Manufacturer.Contains(searchTerm)) ||
+                (a.Model != null && a.Model.Contains(searchTerm)) ||
+                (a.Category != null && a.Category.Contains(searchTerm)) ||
+                (a.NetName != null && a.NetName.Contains(searchTerm)) ||
+                (a.AssignedUserName != null && a.AssignedUserName.Contains(searchTerm)) ||
+                (a.AssignedUserEmail != null && a.AssignedUserEmail.Contains(searchTerm)) ||
+                (a.Manager != null && a.Manager.Contains(searchTerm)) ||
+                (a.Department != null && a.Department.Contains(searchTerm)) ||
+                (a.Unit != null && a.Unit.Contains(searchTerm)) ||
+                (a.Location != null && a.Location.Contains(searchTerm)) ||
+                (a.Floor != null && a.Floor.Contains(searchTerm)) ||
+                (a.Desk != null && a.Desk.Contains(searchTerm)) ||
+                (a.Status != null && a.Status.Contains(searchTerm)) ||
+                (a.LifecycleState.ToString().Contains(searchTerm)) ||
+                (a.IpAddress != null && a.IpAddress.Contains(searchTerm)) ||
+                (a.MacAddress != null && a.MacAddress.Contains(searchTerm)) ||
+                (a.WallPort != null && a.WallPort.Contains(searchTerm)) ||
+                (a.SwitchName != null && a.SwitchName.Contains(searchTerm)) ||
+                (a.SwitchPort != null && a.SwitchPort.Contains(searchTerm)) ||
+                (a.PhoneNumber != null && a.PhoneNumber.Contains(searchTerm)) ||
+                (a.Extension != null && a.Extension.Contains(searchTerm)) ||
+                (a.Imei != null && a.Imei.Contains(searchTerm)) ||
+                (a.CardNumber != null && a.CardNumber.Contains(searchTerm)) ||
+                (a.OsVersion != null && a.OsVersion.Contains(searchTerm)) ||
+                (a.License1 != null && a.License1.Contains(searchTerm)) ||
+                (a.License2 != null && a.License2.Contains(searchTerm)) ||
+                (a.License3 != null && a.License3.Contains(searchTerm)) ||
+                (a.License4 != null && a.License4.Contains(searchTerm)) ||
+                (a.License5 != null && a.License5.Contains(searchTerm)) ||
+                (a.OrderNumber != null && a.OrderNumber.Contains(searchTerm)) ||
+                (a.Vendor != null && a.Vendor.Contains(searchTerm)) ||
+                (a.VendorInvoice != null && a.VendorInvoice.Contains(searchTerm)) ||
+                (a.Notes != null && a.Notes.Contains(searchTerm)) ||
+                (a.CreatedBy != null && a.CreatedBy.Contains(searchTerm))
             );
+        }
+
+        // Apply column filters
+        if (!String.IsNullOrEmpty(filterAssetTag))
+        {
+            var assetTags = filterAssetTag.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => assetTags.Contains(a.AssetTag));
+        }
+
+        if (!String.IsNullOrEmpty(filterSerialNumber))
+        {
+            var serialNumbers = filterSerialNumber.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.SerialNumber != null && serialNumbers.Contains(a.SerialNumber));
+        }
+
+        if (!String.IsNullOrEmpty(filterServiceTag))
+        {
+            var serviceTags = filterServiceTag.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.ServiceTag != null && serviceTags.Contains(a.ServiceTag));
+        }
+
+        if (!String.IsNullOrEmpty(filterManufacturer))
+        {
+            var manufacturers = filterManufacturer.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.Manufacturer != null && manufacturers.Contains(a.Manufacturer));
+        }
+
+        if (!String.IsNullOrEmpty(filterModel))
+        {
+            var models = filterModel.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.Model != null && models.Contains(a.Model));
+        }
+
+        if (!String.IsNullOrEmpty(filterCategory))
+        {
+            var categories = filterCategory.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.Category != null && categories.Contains(a.Category));
+        }
+
+        if (!String.IsNullOrEmpty(filterNetName))
+        {
+            var netNames = filterNetName.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.NetName != null && netNames.Contains(a.NetName));
+        }
+
+        if (!String.IsNullOrEmpty(filterAssignedUser))
+        {
+            var assignedUsers = filterAssignedUser.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.AssignedUserName != null && assignedUsers.Contains(a.AssignedUserName));
+        }
+
+        if (!String.IsNullOrEmpty(filterManager))
+        {
+            var managers = filterManager.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.Manager != null && managers.Contains(a.Manager));
+        }
+
+        if (!String.IsNullOrEmpty(filterDepartment))
+        {
+            var departments = filterDepartment.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.Department != null && departments.Contains(a.Department));
+        }
+
+        if (!String.IsNullOrEmpty(filterLocation))
+        {
+            var locations = filterLocation.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.Location != null && locations.Contains(a.Location));
+        }
+
+        if (!String.IsNullOrEmpty(filterFloor))
+        {
+            var floors = filterFloor.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.Floor != null && floors.Contains(a.Floor));
+        }
+
+        if (!String.IsNullOrEmpty(filterDesk))
+        {
+            var desks = filterDesk.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.Desk != null && desks.Contains(a.Desk));
+        }
+
+        if (!String.IsNullOrEmpty(filterStatus))
+        {
+            var statuses = filterStatus.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.Status != null && statuses.Contains(a.Status));
+        }
+
+        if (!String.IsNullOrEmpty(filterVendor))
+        {
+            var vendors = filterVendor.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.Vendor != null && vendors.Contains(a.Vendor));
+        }
+
+        if (!String.IsNullOrEmpty(filterWarrantyEnd))
+        {
+            var warrantyEnds = filterWarrantyEnd.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            assetsQuery = assetsQuery.Where(a => a.WarrantyEndDate != null && warrantyEnds.Contains(a.WarrantyEndDate.Value.ToString("yyyy-MM-dd")));
         }
 
         // Apply sorting
@@ -124,6 +271,8 @@ public class AssetsController : Controller
             "desk_desc" => assetsQuery.OrderByDescending(a => a.Desk),
             "status" => assetsQuery.OrderBy(a => a.Status),
             "status_desc" => assetsQuery.OrderByDescending(a => a.Status),
+            "lifecycle" => assetsQuery.OrderBy(a => a.LifecycleState),
+            "lifecycle_desc" => assetsQuery.OrderByDescending(a => a.LifecycleState),
             "ipAddress" => assetsQuery.OrderBy(a => a.IpAddress),
             "ipAddress_desc" => assetsQuery.OrderByDescending(a => a.IpAddress),
             "macAddress" => assetsQuery.OrderBy(a => a.MacAddress),
@@ -856,13 +1005,36 @@ public class AssetsController : Controller
             }
 
             var beforeCount = await _context.Assets.CountAsync();
-
-            // Delete AssetHistory records first to avoid foreign key constraint
             var assetIds = assetsToDelete.Select(a => a.Id).ToList();
+            var assetTags = assetsToDelete.Select(a => a.AssetTag).ToList();
+
+            // Delete related records first to avoid foreign key constraint violations
+            // Delete AssetEvents (has Restrict constraint)
+            var assetEvents = await _context.AssetEvents
+                .Where(ae => assetTags.Contains(ae.AssetTag))
+                .ToListAsync();
+            if (assetEvents.Any())
+            {
+                _context.AssetEvents.RemoveRange(assetEvents);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Deleted {Count} AssetEvents for bulk delete operation", assetEvents.Count);
+            }
+
+            // Delete AssetTransfers (has Restrict constraint)
+            var assetTransfers = await _context.AssetTransfers
+                .Where(at => assetTags.Contains(at.AssetTag))
+                .ToListAsync();
+            if (assetTransfers.Any())
+            {
+                _context.AssetTransfers.RemoveRange(assetTransfers);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Deleted {Count} AssetTransfers for bulk delete operation", assetTransfers.Count);
+            }
+
+            // Delete AssetHistory records (has Restrict constraint)
             var assetHistoryRecords = await _context.AssetHistory
                 .Where(ah => assetIds.Contains(ah.AssetId))
                 .ToListAsync();
-            
             if (assetHistoryRecords.Any())
             {
                 _context.AssetHistory.RemoveRange(assetHistoryRecords);
@@ -871,7 +1043,18 @@ public class AssetsController : Controller
                     assetHistoryRecords.Count);
             }
 
-            // Hard delete - permanently remove from database
+            // Delete AssetRequests
+            var assetRequests = await _context.AssetRequests
+                .Where(ar => ar.AssetId.HasValue && assetIds.Contains(ar.AssetId.Value))
+                .ToListAsync();
+            if (assetRequests.Any())
+            {
+                _context.AssetRequests.RemoveRange(assetRequests);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Deleted {Count} AssetRequests for bulk delete operation", assetRequests.Count);
+            }
+
+            // Finally delete the assets
             _context.Assets.RemoveRange(assetsToDelete);
             var result = await _context.SaveChangesAsync();
 
@@ -880,7 +1063,7 @@ public class AssetsController : Controller
 
             _logger.LogInformation("Bulk permanently deleted {Count} assets by {User}. Before: {BeforeCount}, After: {AfterCount}, Result: {Result}", 
                 deletedCount, User.Identity?.Name, beforeCount, afterCount, result);
-            TempData["SuccessMessage"] = $"Successfully permanently deleted {deletedCount} assets. Database count: {beforeCount} → {afterCount}";
+            TempData["SuccessMessage"] = $"Successfully deleted {deletedCount} assets and related records. Database count: {beforeCount} → {afterCount}";
 
             return RedirectToAction(nameof(Index));
         }
@@ -1074,6 +1257,7 @@ public class AssetsController : Controller
         }
     }
 
+    // GET: Assets/ExportVisibleColumns
     [HttpGet]
     public async Task<IActionResult> ExportVisibleColumns(string columnIds, string searchTerm = "", string sortOrder = "")
     {
@@ -1169,6 +1353,8 @@ public class AssetsController : Controller
             "desk_desc" => assets.OrderByDescending(a => a.Desk),
             "status" => assets.OrderBy(a => a.Status),
             "status_desc" => assets.OrderByDescending(a => a.Status),
+            "lifecycle" => assets.OrderBy(a => a.LifecycleState),
+            "lifecycle_desc" => assets.OrderByDescending(a => a.LifecycleState),
             "ipAddress" => assets.OrderBy(a => a.IpAddress),
             "ipAddress_desc" => assets.OrderByDescending(a => a.IpAddress),
             "macAddress" => assets.OrderBy(a => a.MacAddress),
@@ -1217,7 +1403,7 @@ public class AssetsController : Controller
             "createdAt_desc" => assets.OrderByDescending(a => a.CreatedAt),
             "createdBy" => assets.OrderBy(a => a.CreatedBy),
             "createdBy_desc" => assets.OrderByDescending(a => a.CreatedBy),
-            _ => assets.OrderBy(a => a.AssetTag),
+            _ => assets.OrderBy(a => a.AssetTag)
         };
 
         var assetList = await assets.ToListAsync();
@@ -1369,10 +1555,10 @@ public class AssetsController : Controller
                 case "Location":
                     if (!string.IsNullOrWhiteSpace(value))
                     {
-                        var validLocations = new[] { "LIC", "BROOKLYN", "BRONX", "STATEN ISLAND", "66JOHN" };
+                        var validLocations = new[] { "100CHURCH", "LIC", "BROOKLYN", "BRONX", "STATEN ISLAND", "66JOHN" };
                         if (!validLocations.Contains(value.ToUpper()))
                         {
-                            return Json(new { success = false, message = "Invalid location. Valid locations: LIC, BROOKLYN, BRONX, STATEN ISLAND, 66JOHN" });
+                            return Json(new { success = false, message = "Invalid location. Valid locations: 100CHURCH, LIC, BROOKLYN, BRONX, STATEN ISLAND, 66JOHN" });
                         }
                         asset.Location = value.ToUpper();
                     }
@@ -1510,6 +1696,7 @@ public class AssetsController : Controller
                 ("Floor", a => a.Floor ?? ""),
                 ("Desk", a => a.Desk ?? ""),
                 ("Status", a => a.Status ?? ""),
+                ("Lifecycle State", a => a.LifecycleState.ToString()),
                 ("IP Address", a => a.IpAddress ?? ""),
                 ("MAC Address", a => a.MacAddress ?? ""),
                 ("Wall Port", a => a.WallPort ?? ""),
@@ -1579,6 +1766,580 @@ public class AssetsController : Controller
         }
     }
 
+    // GET: Assets/ExportSelectedAssets
+    [HttpGet]
+    [Authorize(Roles = "Admin,IT")]
+    public async Task<IActionResult> ExportSelectedAssets(string assetTags, string searchTerm = "", string sortOrder = "")
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(assetTags))
+            {
+                return BadRequest("No asset tags provided for export");
+            }
+
+            var assetTagList = assetTags.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            
+            // Build query based on asset tags and any additional filters
+            var assetsQuery = _context.Assets.AsQueryable();
+            
+            // Apply search filter if provided
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                assetsQuery = assetsQuery.Where(a => 
+                    (a.AssetTag != null && a.AssetTag.Contains(searchTerm)) ||
+                    (a.SerialNumber != null && a.SerialNumber.Contains(searchTerm)) ||
+                    (a.ServiceTag != null && a.ServiceTag.Contains(searchTerm)) ||
+                    (a.Manufacturer != null && a.Manufacturer.Contains(searchTerm)) ||
+                    (a.Model != null && a.Model.Contains(searchTerm)) ||
+                    (a.Category != null && a.Category.Contains(searchTerm)) ||
+                    (a.NetName != null && a.NetName.Contains(searchTerm)) ||
+                    (a.AssignedUserName != null && a.AssignedUserName.Contains(searchTerm)) ||
+                    (a.AssignedUserEmail != null && a.AssignedUserEmail.Contains(searchTerm)) ||
+                    (a.Manager != null && a.Manager.Contains(searchTerm)) ||
+                    (a.Department != null && a.Department.Contains(searchTerm)) ||
+                    (a.Unit != null && a.Unit.Contains(searchTerm)) ||
+                    (a.Location != null && a.Location.Contains(searchTerm)) ||
+                    (a.Floor != null && a.Floor.Contains(searchTerm)) ||
+                    (a.Desk != null && a.Desk.Contains(searchTerm)) ||
+                    (a.Status != null && a.Status.Contains(searchTerm)) ||
+                    (a.IpAddress != null && a.IpAddress.Contains(searchTerm)) ||
+                    (a.MacAddress != null && a.MacAddress.Contains(searchTerm)) ||
+                    (a.WallPort != null && a.WallPort.Contains(searchTerm)) ||
+                    (a.SwitchName != null && a.SwitchName.Contains(searchTerm)) ||
+                    (a.SwitchPort != null && a.SwitchPort.Contains(searchTerm)) ||
+                    (a.PhoneNumber != null && a.PhoneNumber.Contains(searchTerm)) ||
+                    (a.Extension != null && a.Extension.Contains(searchTerm)) ||
+                    (a.Imei != null && a.Imei.Contains(searchTerm)) ||
+                    (a.CardNumber != null && a.CardNumber.Contains(searchTerm)) ||
+                    (a.OsVersion != null && a.OsVersion.Contains(searchTerm)) ||
+                    (a.License1 != null && a.License1.Contains(searchTerm)) ||
+                    (a.License2 != null && a.License2.Contains(searchTerm)) ||
+                    (a.License3 != null && a.License3.Contains(searchTerm)) ||
+                    (a.License4 != null && a.License4.Contains(searchTerm)) ||
+                    (a.License5 != null && a.License5.Contains(searchTerm)) ||
+                    (a.OrderNumber != null && a.OrderNumber.Contains(searchTerm)) ||
+                    (a.Vendor != null && a.Vendor.Contains(searchTerm)) ||
+                    (a.VendorInvoice != null && a.VendorInvoice.Contains(searchTerm)) ||
+                    (a.Notes != null && a.Notes.Contains(searchTerm))
+                );
+            }
+            
+            // Apply sorting if provided
+            if (!string.IsNullOrEmpty(sortOrder))
+            {
+                assetsQuery = sortOrder switch
+                {
+                    "assetTag" => assetsQuery.OrderBy(a => a.AssetTag),
+                    "assetTag_desc" => assetsQuery.OrderByDescending(a => a.AssetTag),
+                    "serialNumber" => assetsQuery.OrderBy(a => a.SerialNumber),
+                    "serialNumber_desc" => assetsQuery.OrderByDescending(a => a.SerialNumber),
+                    "manufacturer" => assetsQuery.OrderBy(a => a.Manufacturer),
+                    "manufacturer_desc" => assetsQuery.OrderByDescending(a => a.Manufacturer),
+                    "model" => assetsQuery.OrderBy(a => a.Model),
+                    "model_desc" => assetsQuery.OrderByDescending(a => a.Model),
+                    "category" => assetsQuery.OrderBy(a => a.Category),
+                    "category_desc" => assetsQuery.OrderByDescending(a => a.Category),
+                    "assignedUser" => assetsQuery.OrderBy(a => a.AssignedUserName),
+                    "assignedUser_desc" => assetsQuery.OrderByDescending(a => a.AssignedUserName),
+                    "department" => assetsQuery.OrderBy(a => a.Department),
+                    "department_desc" => assetsQuery.OrderByDescending(a => a.Department),
+                    "location" => assetsQuery.OrderBy(a => a.Location),
+                    "location_desc" => assetsQuery.OrderByDescending(a => a.Location),
+                    "status" => assetsQuery.OrderBy(a => a.Status),
+                    "status_desc" => assetsQuery.OrderByDescending(a => a.Status),
+                    "createdAt" => assetsQuery.OrderBy(a => a.CreatedAt),
+                    "createdAt_desc" => assetsQuery.OrderByDescending(a => a.CreatedAt),
+                    _ => assetsQuery.OrderBy(a => a.AssetTag)
+                };
+            }
+            else
+            {
+                assetsQuery = assetsQuery.OrderBy(a => a.AssetTag);
+            }
+            
+            // Filter by selected asset tags
+            assetsQuery = assetsQuery.Where(a => assetTagList.Contains(a.AssetTag));
+            
+            var assets = await assetsQuery.ToListAsync();
+
+            if (!assets.Any())
+            {
+                return BadRequest("No assets found matching the selected criteria");
+            }
+
+            // Create Excel workbook
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Selected Assets");
+
+            // Define all columns for complete export
+            var columns = new (string Header, Func<Domain.Entities.Asset, object> GetValue)[]
+            {
+                ("Asset Tag", a => a.AssetTag ?? ""),
+                ("Serial Number", a => a.SerialNumber ?? ""),
+                ("Service Tag", a => a.ServiceTag ?? ""),
+                ("Manufacturer", a => a.Manufacturer ?? ""),
+                ("Model", a => a.Model ?? ""),
+                ("Category", a => a.Category ?? ""),
+                ("Net Name", a => a.NetName ?? ""),
+                ("Assigned User", a => a.AssignedUserName ?? ""),
+                ("Assigned User Email", a => a.AssignedUserEmail ?? ""),
+                ("Manager", a => a.Manager ?? ""),
+                ("Department", a => a.Department ?? ""),
+                ("Unit", a => a.Unit ?? ""),
+                ("Location", a => a.Location ?? ""),
+                ("Floor", a => a.Floor ?? ""),
+                ("Desk", a => a.Desk ?? ""),
+                ("Status", a => a.Status ?? ""),
+                ("Lifecycle State", a => a.LifecycleState.ToString()),
+                ("IP Address", a => a.IpAddress ?? ""),
+                ("MAC Address", a => a.MacAddress ?? ""),
+                ("Wall Port", a => a.WallPort ?? ""),
+                ("Switch Name", a => a.SwitchName ?? ""),
+                ("Switch Port", a => a.SwitchPort ?? ""),
+                ("Phone Number", a => a.PhoneNumber ?? ""),
+                ("Extension", a => a.Extension ?? ""),
+                ("IMEI", a => a.Imei ?? ""),
+                ("Card Number", a => a.CardNumber ?? ""),
+                ("OS Version", a => a.OsVersion ?? ""),
+                ("License1", a => a.License1 ?? ""),
+                ("License2", a => a.License2 ?? ""),
+                ("License3", a => a.License3 ?? ""),
+                ("License4", a => a.License4 ?? ""),
+                ("License5", a => a.License5 ?? ""),
+                ("Purchase Price", a => a.PurchasePrice?.ToString() ?? ""),
+                ("Order Number", a => a.OrderNumber ?? ""),
+                ("Vendor", a => a.Vendor ?? ""),
+                ("Vendor Invoice", a => a.VendorInvoice ?? ""),
+                ("Purchase Date", a => a.PurchaseDate?.ToString("MM/dd/yyyy") ?? ""),
+                ("Warranty Start", a => a.WarrantyStart?.ToString("MM/dd/yyyy") ?? ""),
+                ("Warranty End", a => a.WarrantyEndDate?.ToString("MM/dd/yyyy") ?? ""),
+                ("Notes", a => a.Notes ?? ""),
+                ("Created At", a => a.CreatedAt.ToString("MM/dd/yyyy HH:mm:ss")),
+                ("Created By", a => a.CreatedBy ?? ""),
+                ("Updated At", a => a.UpdatedAt?.ToString("MM/dd/yyyy HH:mm:ss") ?? ""),
+                ("Updated By", a => a.UpdatedBy ?? ""),
+                ("Is Active", a => a.IsActive ? "Yes" : "No")
+            };
+
+            // Add headers
+            for (int i = 0; i < columns.Length; i++)
+            {
+                worksheet.Cell(1, i + 1).Value = columns[i].Header;
+                worksheet.Cell(1, i + 1).Style.Font.Bold = true;
+                worksheet.Cell(1, i + 1).Style.Fill.BackgroundColor = XLColor.LightGray;
+            }
+
+            // Add data rows
+            for (int row = 0; row < assets.Count; row++)
+            {
+                var asset = assets[row];
+                for (int col = 0; col < columns.Length; col++)
+                {
+                    var value = columns[col].GetValue(asset);
+                    worksheet.Cell(row + 2, col + 1).Value = value?.ToString() ?? "";
+                }
+            }
+
+            // Auto-fit columns
+            worksheet.Columns().AdjustToContents();
+
+            // Generate file
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"Selected_Assets_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            return File(stream.ToArray(), 
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting selected assets");
+            return BadRequest("Error exporting selected assets: " + ex.Message);
+        }
+    }
+
+    // GET: Assets/ExportCurrentView
+    [HttpGet]
+    [Authorize(Roles = "Admin,IT")]
+    public async Task<IActionResult> ExportCurrentView(string searchTerm = "", string sortOrder = "", string columnConfig = "")
+    {
+        try
+        {
+            // Build query based on current view filters
+            var assetsQuery = _context.Assets.AsQueryable();
+            
+            // Apply search filter if provided
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                assetsQuery = assetsQuery.Where(a => 
+                    (a.AssetTag != null && a.AssetTag.Contains(searchTerm)) ||
+                    (a.SerialNumber != null && a.SerialNumber.Contains(searchTerm)) ||
+                    (a.ServiceTag != null && a.ServiceTag.Contains(searchTerm)) ||
+                    (a.Manufacturer != null && a.Manufacturer.Contains(searchTerm)) ||
+                    (a.Model != null && a.Model.Contains(searchTerm)) ||
+                    (a.Category != null && a.Category.Contains(searchTerm)) ||
+                    (a.NetName != null && a.NetName.Contains(searchTerm)) ||
+                    (a.AssignedUserName != null && a.AssignedUserName.Contains(searchTerm)) ||
+                    (a.AssignedUserEmail != null && a.AssignedUserEmail.Contains(searchTerm)) ||
+                    (a.Manager != null && a.Manager.Contains(searchTerm)) ||
+                    (a.Department != null && a.Department.Contains(searchTerm)) ||
+                    (a.Unit != null && a.Unit.Contains(searchTerm)) ||
+                    (a.Location != null && a.Location.Contains(searchTerm)) ||
+                    (a.Floor != null && a.Floor.Contains(searchTerm)) ||
+                    (a.Desk != null && a.Desk.Contains(searchTerm)) ||
+                    (a.Status != null && a.Status.Contains(searchTerm)) ||
+                    (a.IpAddress != null && a.IpAddress.Contains(searchTerm)) ||
+                    (a.MacAddress != null && a.MacAddress.Contains(searchTerm)) ||
+                    (a.WallPort != null && a.WallPort.Contains(searchTerm)) ||
+                    (a.SwitchName != null && a.SwitchName.Contains(searchTerm)) ||
+                    (a.SwitchPort != null && a.SwitchPort.Contains(searchTerm)) ||
+                    (a.PhoneNumber != null && a.PhoneNumber.Contains(searchTerm)) ||
+                    (a.Extension != null && a.Extension.Contains(searchTerm)) ||
+                    (a.Imei != null && a.Imei.Contains(searchTerm)) ||
+                    (a.CardNumber != null && a.CardNumber.Contains(searchTerm)) ||
+                    (a.OsVersion != null && a.OsVersion.Contains(searchTerm)) ||
+                    (a.License1 != null && a.License1.Contains(searchTerm)) ||
+                    (a.License2 != null && a.License2.Contains(searchTerm)) ||
+                    (a.License3 != null && a.License3.Contains(searchTerm)) ||
+                    (a.License4 != null && a.License4.Contains(searchTerm)) ||
+                    (a.License5 != null && a.License5.Contains(searchTerm)) ||
+                    (a.OrderNumber != null && a.OrderNumber.Contains(searchTerm)) ||
+                    (a.Vendor != null && a.Vendor.Contains(searchTerm)) ||
+                    (a.VendorInvoice != null && a.VendorInvoice.Contains(searchTerm)) ||
+                    (a.Notes != null && a.Notes.Contains(searchTerm))
+                );
+            }
+            
+            // Apply sorting if provided
+            if (!string.IsNullOrEmpty(sortOrder))
+            {
+                assetsQuery = sortOrder switch
+                {
+                    "assetTag" => assetsQuery.OrderBy(a => a.AssetTag),
+                    "assetTag_desc" => assetsQuery.OrderByDescending(a => a.AssetTag),
+                    "serialNumber" => assetsQuery.OrderBy(a => a.SerialNumber),
+                    "serialNumber_desc" => assetsQuery.OrderByDescending(a => a.SerialNumber),
+                    "manufacturer" => assetsQuery.OrderBy(a => a.Manufacturer),
+                    "manufacturer_desc" => assetsQuery.OrderByDescending(a => a.Manufacturer),
+                    "model" => assetsQuery.OrderBy(a => a.Model),
+                    "model_desc" => assetsQuery.OrderByDescending(a => a.Model),
+                    "category" => assetsQuery.OrderBy(a => a.Category),
+                    "category_desc" => assetsQuery.OrderByDescending(a => a.Category),
+                    "assignedUser" => assetsQuery.OrderBy(a => a.AssignedUserName),
+                    "assignedUser_desc" => assetsQuery.OrderByDescending(a => a.AssignedUserName),
+                    "department" => assetsQuery.OrderBy(a => a.Department),
+                    "department_desc" => assetsQuery.OrderByDescending(a => a.Department),
+                    "location" => assetsQuery.OrderBy(a => a.Location),
+                    "location_desc" => assetsQuery.OrderByDescending(a => a.Location),
+                    "status" => assetsQuery.OrderBy(a => a.Status),
+                    "status_desc" => assetsQuery.OrderByDescending(a => a.Status),
+                    "createdAt" => assetsQuery.OrderBy(a => a.CreatedAt),
+                    "createdAt_desc" => assetsQuery.OrderByDescending(a => a.CreatedAt),
+                    _ => assetsQuery.OrderBy(a => a.AssetTag)
+                };
+            }
+            else
+            {
+                assetsQuery = assetsQuery.OrderBy(a => a.AssetTag);
+            }
+            
+            var assets = await assetsQuery.ToListAsync();
+
+            if (!assets.Any())
+            {
+                return BadRequest("No assets found matching the current view criteria");
+            }
+
+            // Create Excel workbook
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Current View Assets");
+
+            // Define all possible columns
+            var allColumns = new Dictionary<string, (string Header, Func<Domain.Entities.Asset, object> GetValue)>
+            {
+                { "assetTag", ("Asset Tag", a => a.AssetTag ?? "") },
+                { "serialNumber", ("Serial Number", a => a.SerialNumber ?? "") },
+                { "serviceTag", ("Service Tag", a => a.ServiceTag ?? "") },
+                { "manufacturer", ("Manufacturer", a => a.Manufacturer ?? "") },
+                { "model", ("Model", a => a.Model ?? "") },
+                { "category", ("Category", a => a.Category ?? "") },
+                { "netName", ("Net Name", a => a.NetName ?? "") },
+                { "assignedUser", ("Assigned User", a => a.AssignedUserName ?? "") },
+                { "assignedUserEmail", ("Assigned User Email", a => a.AssignedUserEmail ?? "") },
+                { "manager", ("Manager", a => a.Manager ?? "") },
+                { "department", ("Department", a => a.Department ?? "") },
+                { "unit", ("Unit", a => a.Unit ?? "") },
+                { "location", ("Location", a => a.Location ?? "") },
+                { "floor", ("Floor", a => a.Floor ?? "") },
+                { "desk", ("Desk", a => a.Desk ?? "") },
+                { "status", ("Status", a => a.Status ?? "") },
+                { "ipAddress", ("IP Address", a => a.IpAddress ?? "") },
+                { "macAddress", ("MAC Address", a => a.MacAddress ?? "") },
+                { "wallPort", ("Wall Port", a => a.WallPort ?? "") },
+                { "switchName", ("Switch Name", a => a.SwitchName ?? "") },
+                { "switchPort", ("Switch Port", a => a.SwitchPort ?? "") },
+                { "phoneNumber", ("Phone Number", a => a.PhoneNumber ?? "") },
+                { "extension", ("Extension", a => a.Extension ?? "") },
+                { "imei", ("IMEI", a => a.Imei ?? "") },
+                { "cardNumber", ("Card Number", a => a.CardNumber ?? "") },
+                { "osVersion", ("OS Version", a => a.OsVersion ?? "") },
+                { "license1", ("License1", a => a.License1 ?? "") },
+                { "license2", ("License2", a => a.License2 ?? "") },
+                { "license3", ("License3", a => a.License3 ?? "") },
+                { "license4", ("License4", a => a.License4 ?? "") },
+                { "license5", ("License5", a => a.License5 ?? "") },
+                { "purchaseOrderNumber", ("Purchase Order Number", a => a.OrderNumber ?? "") },
+                { "vendor", ("Vendor", a => a.Vendor ?? "") },
+                { "vendorInvoice", ("Vendor Invoice", a => a.VendorInvoice ?? "") },
+                { "purchaseDate", ("Purchase Date", a => a.PurchaseDate?.ToString("MM/dd/yyyy") ?? "") },
+                { "warrantyStart", ("Warranty Start", a => a.WarrantyStart?.ToString("MM/dd/yyyy") ?? "") },
+                { "warrantyEnd", ("Warranty End", a => a.WarrantyEndDate?.ToString("MM/dd/yyyy") ?? "") },
+                { "notes", ("Notes", a => a.Notes ?? "") },
+                { "createdAt", ("Created At", a => a.CreatedAt.ToString("MM/dd/yyyy HH:mm:ss")) },
+                { "createdBy", ("Created By", a => a.CreatedBy ?? "") },
+                { "updatedAt", ("Updated At", a => a.UpdatedAt?.ToString("MM/dd/yyyy HH:mm:ss") ?? "") },
+                { "updatedBy", ("Updated By", a => a.UpdatedBy ?? "") },
+                { "isActive", ("Is Active", a => a.IsActive ? "Yes" : "No") },
+                { "lifecycleState", ("Lifecycle State", a => a.LifecycleState.ToString()) }
+            };
+
+            // Parse column configuration if provided
+            var columns = new List<(string Header, Func<Domain.Entities.Asset, object> GetValue)>();
+            
+            if (!string.IsNullOrEmpty(columnConfig))
+            {
+                try
+                {
+                    var columnIds = columnConfig.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var columnId in columnIds)
+                    {
+                        if (allColumns.ContainsKey(columnId))
+                        {
+                            columns.Add(allColumns[columnId]);
+                        }
+                    }
+                }
+                catch
+                {
+                    // If parsing fails, use default columns
+                }
+            }
+
+            // If no valid column configuration, use default visible columns
+            if (columns.Count == 0)
+            {
+                var defaultColumnIds = new[] { "assetTag", "serialNumber", "manufacturer", "model", "category", "assignedUser", "department", "location", "status" };
+                foreach (var columnId in defaultColumnIds)
+                {
+                    if (allColumns.ContainsKey(columnId))
+                    {
+                        columns.Add(allColumns[columnId]);
+                    }
+                }
+            }
+
+            // Add headers
+            for (int i = 0; i < columns.Count; i++)
+            {
+                worksheet.Cell(1, i + 1).Value = columns[i].Header;
+                worksheet.Cell(1, i + 1).Style.Font.Bold = true;
+                worksheet.Cell(1, i + 1).Style.Fill.BackgroundColor = XLColor.LightGray;
+            }
+
+            // Add data rows
+            for (int row = 0; row < assets.Count; row++)
+            {
+                var asset = assets[row];
+                for (int col = 0; col < columns.Count; col++)
+                {
+                    var value = columns[col].GetValue(asset);
+                    worksheet.Cell(row + 2, col + 1).Value = value?.ToString() ?? "";
+                }
+            }
+
+            // Auto-fit columns
+            worksheet.Columns().AdjustToContents();
+
+            // Generate file
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            stream.Position = 0;
+
+            var fileName = $"Current_View_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            return File(stream.ToArray(), 
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting current view");
+            return BadRequest("Error exporting current view: " + ex.Message);
+        }
+    }
+
+    // GET: Assets/GetFloorsForLocation
+    [HttpGet]
+    [Authorize(Roles = "Admin,IT")]
+    public async Task<IActionResult> GetFloorsForLocation(string location)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(location))
+            {
+                return BadRequest("Location is required");
+            }
+
+            // Get floors for the specified location/building
+            var floors = await _context.Floors
+                .Where(f => f.Building.BuildingCode == location && f.IsActive)
+                .OrderBy(f => f.FloorNumber)
+                .Select(f => new { f.Name, f.FloorNumber, f.Description })
+                .ToListAsync();
+
+            // Add "Storage" as an option for all locations
+            var floorOptions = new List<object>
+            {
+                new { Name = "Storage", FloorNumber = "Storage", Description = "Storage area" }
+            };
+
+            floorOptions.AddRange(floors);
+
+            return Json(new { success = true, floors = floorOptions });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting floors for location: {Location}", location);
+            return BadRequest("Error getting floors: " + ex.Message);
+        }
+    }
+
+    // POST: Assets/GetSelectedAssets
+    [HttpPost]
+    [Authorize(Roles = "Admin,IT")]
+    public async Task<IActionResult> GetSelectedAssets([FromBody] List<string> assetTags)
+    {
+        try
+        {
+            if (assetTags == null || !assetTags.Any())
+            {
+                return Json(new { success = false, message = "No asset tags provided" });
+            }
+
+            var assets = await _context.Assets
+                .Where(a => assetTags.Contains(a.AssetTag))
+                .Select(a => new
+                {
+                    assetTag = a.AssetTag,
+                    category = a.Category,
+                    manufacturer = a.Manufacturer,
+                    model = a.Model,
+                    location = a.Location,
+                    status = a.Status,
+                    lifecycleState = a.LifecycleState.ToString()
+                })
+                .ToListAsync();
+
+            return Json(new { success = true, assets = assets });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting selected assets");
+            return Json(new { success = false, message = "Error retrieving selected assets" });
+        }
+    }
+
+    // GET: Assets/Cart
+    [HttpGet]
+    [Authorize(Roles = "Admin,IT")]
+    public async Task<IActionResult> Cart(string assetTags)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(assetTags))
+            {
+                return RedirectToAction("Index");
+            }
+
+            var assetTagList = assetTags.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            
+            var assets = await _context.Assets
+                .Where(a => assetTagList.Contains(a.AssetTag))
+                .ToListAsync();
+
+            ViewBag.AssetTags = assetTags;
+            return View(assets);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading cart page");
+            return RedirectToAction("Index");
+        }
+    }
+
+    // POST: Assets/BulkCheckout
+    [HttpPost]
+    [Authorize(Roles = "Admin,IT")]
+    public async Task<IActionResult> BulkCheckout([FromBody] BulkCheckoutRequest request)
+    {
+        try
+        {
+            if (request?.AssetTags == null || !request.AssetTags.Any())
+            {
+                return Json(new { success = false, message = "No asset tags provided" });
+            }
+
+            var assets = await _context.Assets
+                .Where(a => request.AssetTags.Contains(a.AssetTag))
+                .ToListAsync();
+
+            if (!assets.Any())
+            {
+                return Json(new { success = false, message = "No assets found" });
+            }
+
+            foreach (var asset in assets)
+            {
+                // Update asset location and assignment
+                asset.Location = request.Location;
+                asset.Floor = request.Floor;
+                asset.Desk = request.Desk;
+                asset.AssignedUserName = request.User;
+                asset.AssignedUserEmail = request.Email;
+                asset.Status = "Active";
+                asset.LifecycleState = AssetLifecycleState.Deployed;
+                asset.UpdatedAt = DateTime.UtcNow;
+                asset.UpdatedBy = User.Identity?.Name ?? "System";
+
+                // Add to asset history
+                var historyEntry = new AssetHistory
+                {
+                    AssetId = asset.Id,
+                    Action = "Bulk Checkout",
+                    Description = $"Checked out to {request.Location} - {request.Floor} (Desk: {request.Desk}) for {request.User}",
+                    UserName = User.Identity?.Name ?? "System",
+                    Timestamp = DateTime.UtcNow
+                };
+
+                _context.AssetHistory.Add(historyEntry);
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Bulk checkout of {Count} assets to {Location} by {User}", 
+                assets.Count, request.Location, User.Identity?.Name);
+
+            return Json(new { success = true, message = $"Successfully checked out {assets.Count} assets to {request.Location}" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during bulk checkout");
+            return Json(new { success = false, message = "Error during checkout: " + ex.Message });
+        }
+    }
+
     // POST: Assets/DeleteAll
     [HttpPost]
     [Authorize(Roles = "Admin")]
@@ -1589,28 +2350,367 @@ public class AssetsController : Controller
             // Get count before deletion for logging
             var assetCount = await _context.Assets.CountAsync();
             
-            // Delete all assets
+            // Delete related records first to avoid foreign key constraint violations
+            // Delete AssetEvents (has Restrict constraint)
+            var assetEvents = await _context.AssetEvents.ToListAsync();
+            if (assetEvents.Any())
+            {
+                _context.AssetEvents.RemoveRange(assetEvents);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Deleted {Count} AssetEvents", assetEvents.Count);
+            }
+            
+            // Delete AssetTransfers (has Restrict constraint)
+            var assetTransfers = await _context.AssetTransfers.ToListAsync();
+            if (assetTransfers.Any())
+            {
+                _context.AssetTransfers.RemoveRange(assetTransfers);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Deleted {Count} AssetTransfers", assetTransfers.Count);
+            }
+            
+            // Delete AssetHistory (has Restrict constraint)
+            var assetHistory = await _context.AssetHistory.ToListAsync();
+            if (assetHistory.Any())
+            {
+                _context.AssetHistory.RemoveRange(assetHistory);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Deleted {Count} AssetHistory records", assetHistory.Count);
+            }
+            
+            // Delete AssetRequests
+            var assetRequests = await _context.AssetRequests.ToListAsync();
+            if (assetRequests.Any())
+            {
+                _context.AssetRequests.RemoveRange(assetRequests);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Deleted {Count} AssetRequests", assetRequests.Count);
+            }
+            
+            // Finally delete all assets
             var assets = await _context.Assets.ToListAsync();
             _context.Assets.RemoveRange(assets);
-            
-            // Also delete related asset history records
-            var assetHistory = await _context.AssetHistory.ToListAsync();
-            _context.AssetHistory.RemoveRange(assetHistory);
-            
-            // Delete asset requests
-            var assetRequests = await _context.AssetRequests.ToListAsync();
-            _context.AssetRequests.RemoveRange(assetRequests);
-            
             await _context.SaveChangesAsync();
 
-            _logger.LogWarning("All {AssetCount} assets deleted by user {User}", assetCount, User.Identity?.Name);
+            _logger.LogWarning("All {AssetCount} assets and related records deleted by user {User}", assetCount, User.Identity?.Name);
 
-            return Json(new { success = true, message = $"Successfully deleted {assetCount} assets and related records." });
+            return Json(new { success = true, message = $"Successfully deleted {assetCount} assets and all related records." });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting all assets");
             return Json(new { success = false, message = "Error deleting assets: " + ex.Message });
+        }
+    }
+
+    // GET: Assets/Search
+    [HttpGet]
+    [Route("api/assets/search")]
+    public async Task<IActionResult> Search(
+        string? query = null,
+        string? category = null,
+        string? location = null,
+        string? floor = null,
+        string? status = null,
+        string? vendor = null,
+        bool unassignedOnly = false,
+        DateTimeOffset? createdFrom = null,
+        DateTimeOffset? createdTo = null,
+        DateTimeOffset? warrantyFrom = null,
+        DateTimeOffset? warrantyTo = null,
+        int page = 1,
+        int pageSize = 50,
+        string? sortBy = null,
+        bool sortDescending = false)
+    {
+        try
+        {
+            var request = new AssetSearchRequest
+            {
+                Query = query,
+                Category = category,
+                Location = location,
+                Floor = floor,
+                Status = status,
+                Vendor = vendor,
+                UnassignedOnly = unassignedOnly,
+                CreatedFrom = createdFrom,
+                CreatedTo = createdTo,
+                WarrantyFrom = warrantyFrom,
+                WarrantyTo = warrantyTo,
+                Page = page,
+                PageSize = pageSize,
+                SortBy = sortBy,
+                SortDescending = sortDescending
+            };
+
+            var result = await _searchService.SearchAsync(request);
+            
+            _logger.LogInformation("Search completed: {Query}, {Total} results in {Time}ms, FTS: {FtsUsed}", 
+                query, result.Total, result.SearchTimeMs, result.UsedFullTextSearch);
+
+            return Json(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during asset search");
+            return BadRequest(new { error = "Search failed", message = ex.Message });
+        }
+    }
+
+    // GET: Assets/Search
+    [HttpGet]
+    public IActionResult Search()
+    {
+        return View();
+    }
+
+    // POST: Assets/MarkForSalvage
+    [HttpPost]
+    [Authorize(Roles = "SiteTech,JohnStOps,Admin")]
+    public async Task<IActionResult> MarkForSalvage(string assetTag)
+    {
+        try
+        {
+            var success = await _lifecycleService.MarkSalvagePending(assetTag, User.Identity?.Name ?? "Unknown");
+            if (success)
+            {
+                return Json(new { success = true, message = $"Asset {assetTag} marked for salvage" });
+            }
+            return Json(new { success = false, message = "Failed to mark asset for salvage" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error marking asset {AssetTag} for salvage", assetTag);
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+    // POST: Assets/BulkMarkForSalvage
+    [HttpPost]
+    [Authorize(Roles = "SiteTech,JohnStOps,Admin")]
+    public async Task<IActionResult> BulkMarkForSalvage([FromBody] List<string> assetTags)
+    {
+        try
+        {
+            var results = new List<object>();
+            var successCount = 0;
+            var failCount = 0;
+
+            foreach (var assetTag in assetTags)
+            {
+                var success = await _lifecycleService.MarkSalvagePending(assetTag, User.Identity?.Name ?? "Unknown");
+                if (success)
+                {
+                    successCount++;
+                    results.Add(new { assetTag, success = true });
+                }
+                else
+                {
+                    failCount++;
+                    results.Add(new { assetTag, success = false, message = "Failed to mark for salvage" });
+                }
+            }
+
+            return Json(new { 
+                success = true, 
+                message = $"Marked {successCount} assets for salvage, {failCount} failed",
+                results 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk mark for salvage");
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+    // POST: Assets/DeployAsset
+    [HttpPost]
+    [Authorize(Roles = "SiteTech,JohnStOps,Admin")]
+    public async Task<IActionResult> DeployAsset([FromBody] DeployAssetRequest request)
+    {
+        try
+        {
+            var success = await _lifecycleService.DeployAsset(
+                request.AssetTag, 
+                request.Desk, 
+                request.UserName, 
+                request.UserEmail, 
+                User.Identity?.Name ?? "Unknown"
+            );
+            
+            if (success)
+            {
+                return Json(new { success = true, message = $"Asset {request.AssetTag} deployed successfully" });
+            }
+            return Json(new { success = false, message = "Failed to deploy asset" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deploying asset {AssetTag}", request.AssetTag);
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+    // POST: Assets/MoveToStorage
+    [HttpPost]
+    [Authorize(Roles = "SiteTech,JohnStOps,Admin")]
+    public async Task<IActionResult> MoveToStorage(string assetTag)
+    {
+        try
+        {
+            var success = await _lifecycleService.TransitionToState(
+                assetTag, 
+                AssetLifecycleState.InStorage, 
+                User.Identity?.Name ?? "Unknown"
+            );
+            
+            if (success)
+            {
+                return Json(new { success = true, message = $"Asset {assetTag} moved to storage" });
+            }
+            return Json(new { success = false, message = "Failed to move asset to storage" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error moving asset {AssetTag} to storage", assetTag);
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+    // GET: Assets/GetLifecycleActions
+    [HttpGet]
+    public async Task<IActionResult> GetLifecycleActions(string assetTag)
+    {
+        try
+        {
+            var asset = await _context.Assets.FirstOrDefaultAsync(a => a.AssetTag == assetTag);
+            if (asset == null)
+            {
+                return Json(new { success = false, message = "Asset not found" });
+            }
+
+            var availableActions = new List<string>();
+            
+            switch (asset.LifecycleState)
+            {
+                case AssetLifecycleState.InStorage:
+                case AssetLifecycleState.Delivered:
+                    availableActions.AddRange(new[] { "Deploy", "ReadyForShipment", "MarkForSalvage" });
+                    break;
+                case AssetLifecycleState.Deployed:
+                    availableActions.AddRange(new[] { "Replace", "Redeploy", "MoveToStorage", "ReadyForShipment", "MarkForSalvage" });
+                    break;
+                case AssetLifecycleState.RedeployPending:
+                    availableActions.AddRange(new[] { "Redeploy", "MoveToStorage", "ReadyForShipment" });
+                    break;
+                case AssetLifecycleState.ReadyForShipment:
+                    availableActions.AddRange(new[] { "PickupAsset" }); // Only Facilities Drivers
+                    break;
+                case AssetLifecycleState.InTransit:
+                    availableActions.AddRange(new[] { "DeliverAsset" }); // Only Facilities Drivers
+                    break;
+                case AssetLifecycleState.SalvagePending:
+                    availableActions.AddRange(new[] { "ReadyForShipment" }); // Cannot be redeployed, only shipped for salvage
+                    break;
+                case AssetLifecycleState.Salvaged:
+                    availableActions.AddRange(new[] { "View" });
+                    break;
+            }
+
+            return Json(new { success = true, actions = availableActions });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting lifecycle actions for asset {AssetTag}", assetTag);
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+    // POST: Assets/BulkMoveToStorage
+    [HttpPost]
+    [Authorize(Roles = "Admin,IT")]
+    public async Task<IActionResult> BulkMoveToStorage([FromBody] List<string> assetTags)
+    {
+        try
+        {
+            if (assetTags == null || !assetTags.Any())
+            {
+                return Json(new { success = false, message = "No asset tags provided" });
+            }
+
+            var results = new List<object>();
+            var successCount = 0;
+            var failCount = 0;
+
+            foreach (var assetTag in assetTags)
+            {
+                var success = await _lifecycleService.TransitionToState(
+                    assetTag, 
+                    AssetLifecycleState.InStorage, 
+                    User.Identity?.Name ?? "Unknown"
+                );
+                
+                if (success)
+                {
+                    successCount++;
+                    results.Add(new { assetTag, success = true });
+                }
+                else
+                {
+                    failCount++;
+                    results.Add(new { assetTag, success = false, message = "Failed to move to storage" });
+                }
+            }
+
+            return Json(new { 
+                success = true, 
+                message = $"Moved {successCount} assets to storage, {failCount} failed",
+                results 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk move to storage");
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+    // GET: Assets/GetFilterValues
+    [HttpGet]
+    [Authorize(Roles = "Admin,IT")]
+    public async Task<IActionResult> GetFilterValues(string column)
+    {
+        try
+        {
+            var values = column.ToLower() switch
+            {
+                "assettag" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.AssetTag)).Select(a => a.AssetTag!).Distinct().OrderBy(v => v).ToListAsync(),
+                "serialnumber" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.SerialNumber)).Select(a => a.SerialNumber!).Distinct().OrderBy(v => v).ToListAsync(),
+                "servicetag" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.ServiceTag)).Select(a => a.ServiceTag!).Distinct().OrderBy(v => v).ToListAsync(),
+                "manufacturer" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.Manufacturer)).Select(a => a.Manufacturer!).Distinct().OrderBy(v => v).ToListAsync(),
+                "model" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.Model)).Select(a => a.Model!).Distinct().OrderBy(v => v).ToListAsync(),
+                "category" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.Category)).Select(a => a.Category!).Distinct().OrderBy(v => v).ToListAsync(),
+                "netname" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.NetName)).Select(a => a.NetName!).Distinct().OrderBy(v => v).ToListAsync(),
+                "assigneduser" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.AssignedUserName)).Select(a => a.AssignedUserName!).Distinct().OrderBy(v => v).ToListAsync(),
+                "manager" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.Manager)).Select(a => a.Manager!).Distinct().OrderBy(v => v).ToListAsync(),
+                "department" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.Department)).Select(a => a.Department!).Distinct().OrderBy(v => v).ToListAsync(),
+                "location" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.Location)).Select(a => a.Location!).Distinct().OrderBy(v => v).ToListAsync(),
+                "floor" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.Floor)).Select(a => a.Floor!).Distinct().OrderBy(v => v).ToListAsync(),
+                "desk" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.Desk)).Select(a => a.Desk!).Distinct().OrderBy(v => v).ToListAsync(),
+                "status" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.Status)).Select(a => a.Status!).Distinct().OrderBy(v => v).ToListAsync(),
+                "vendor" => await _context.Assets.Where(a => !string.IsNullOrEmpty(a.Vendor)).Select(a => a.Vendor!).Distinct().OrderBy(v => v).ToListAsync(),
+                "warrantyend" => await _context.Assets.Where(a => a.WarrantyEndDate.HasValue).Select(a => a.WarrantyEndDate.Value.ToString("yyyy-MM-dd")).Distinct().OrderBy(v => v).ToListAsync(),
+                _ => new List<string>()
+            };
+
+            return Json(new { success = true, values = values });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting filter values for column: {Column}", column);
+            return Json(new { success = false, message = "Error getting filter values: " + ex.Message });
         }
     }
 }

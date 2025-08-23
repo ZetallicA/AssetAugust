@@ -32,6 +32,7 @@
                                 <i class="bi bi-pc-display"></i> Assets
                             </a>
                         </li>
+
                         @if (User.IsInRole("Admin") || User.IsInRole("IT") || User.IsInRole("Procurement"))
                         {
                             <li class="nav-item">

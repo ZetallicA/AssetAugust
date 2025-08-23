@@ -266,7 +266,7 @@
 {
     <div class="card shadow mb-3">
         <div class="card-header bg-warning text-dark">
-            <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Admin Operations</h6>
+            <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> System Admin Operations</h6>
         </div>
         <div class="card-body">
             <div class="d-flex gap-2 mb-3">
@@ -299,9 +299,12 @@
                     <a asp-action="Import" class="btn btn-success">
                         <i class="bi bi-upload"></i> Import
                     </a>
-                    <a asp-action="TestImport" class="btn btn-warning">
-                        <i class="bi bi-bug"></i> Test Import
-                    </a>
+                                    <a asp-action="TestImport" class="btn btn-warning">
+                    <i class="bi bi-bug"></i> Test Import
+                </a>
+                <a asp-action="Search" class="btn btn-info">
+                    <i class="bi bi-search"></i> Search API
+                </a>
                 </div>
             }
             
@@ -322,25 +325,45 @@
                         <button type="submit" class="btn btn-outline-primary">
                             <i class="bi bi-search"></i>
                         </button>
-                        @if (!string.IsNullOrEmpty(ViewData["CurrentFilter"]?.ToString()))
-                        {
-                            <a asp-action="Index" class="btn btn-outline-secondary ms-2">
-                                <i class="bi bi-x-circle"></i> Clear
-                            </a>
-                        }
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearSearch()" title="Clear Search">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
                     </form>
                     
-                    <!-- Export button moved here -->
-                    <button type="button" class="btn btn-outline-success" onclick="exportVisibleColumns()" title="Export Visible Columns">
-                        <i class="bi bi-download"></i> Export
-                    </button>
+                    <!-- Shopping Cart Basket -->
+                    <div class="selection-basket d-none" id="selectionBasket">
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-primary position-relative" onclick="showCartPreview()" id="cartButton">
+                                <i class="bi bi-cart3"></i> Cart
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="selectedCount">0</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
+                                <i class="bi bi-x"></i> Clear
+                            </button>
+                        </div>
+                    </div>
                     
-                    @if (User.IsInRole("Admin") || User.IsInRole("IT"))
-                    {
-                        <a href="@Url.Action("ExportAll", "Assets")" class="btn btn-outline-info" title="Export All Assets">
-                            <i class="bi bi-file-earmark-excel"></i> Export All
-                        </a>
-                    }
+                    <!-- Actions Button - Always Visible -->
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-gear"></i> Actions
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="exportCurrentView()">
+                                <i class="bi bi-download"></i> Export Current View
+                            </a></li>
+                            @if (User.IsInRole("Admin") || User.IsInRole("IT"))
+                            {
+                                <li><a class="dropdown-item" href="#" onclick="exportAllAssets()">
+                                    <i class="bi bi-file-earmark-excel"></i> Export All Assets
+                                </a></li>
+                            }
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="showBulkActions()" id="bulkActionsOption" style="display: none;">
+                                <i class="bi bi-basket"></i> Bulk Actions (<span id="bulkActionsCount">0</span>)
+                            </a></li>
+                        </ul>
+                    </div>
 
                 </div>
             </div>
@@ -384,140 +407,180 @@
                                 </th>
                             }
                             <th class="column-assetTag">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["AssetTagSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Asset Tag
-                                    @if (ViewData["CurrentSort"]?.ToString() == "assetTag_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["AssetTagSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Asset Tag
+                                        @if (ViewData["CurrentSort"]?.ToString() == "assetTag_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('assetTag')" title="Filter Asset Tag">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-serialNumber">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["SerialNumberSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Serial Number
-                                    @if (ViewData["CurrentSort"]?.ToString() == "serialNumber_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "serialNumber")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["SerialNumberSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Serial Number
+                                        @if (ViewData["CurrentSort"]?.ToString() == "serialNumber_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "serialNumber")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('serialNumber')" title="Filter Serial Number">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-serviceTag">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["ServiceTagSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Service Tag
-                                    @if (ViewData["CurrentSort"]?.ToString() == "serviceTag_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "serviceTag")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["ServiceTagSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Service Tag
+                                        @if (ViewData["CurrentSort"]?.ToString() == "serviceTag_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "serviceTag")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('serviceTag')" title="Filter Service Tag">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-manufacturer">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["ManufacturerSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Manufacturer
-                                    @if (ViewData["CurrentSort"]?.ToString() == "manufacturer_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "manufacturer")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["ManufacturerSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Manufacturer
+                                        @if (ViewData["CurrentSort"]?.ToString() == "manufacturer_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "manufacturer")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('manufacturer')" title="Filter Manufacturer">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-model">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["ModelSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Model
-                                    @if (ViewData["CurrentSort"]?.ToString() == "model_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "model")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["ModelSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Model
+                                        @if (ViewData["CurrentSort"]?.ToString() == "model_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "model")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('model')" title="Filter Model">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-category">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["CategorySortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Category
-                                    @if (ViewData["CurrentSort"]?.ToString() == "category_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "category")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["CategorySortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Category
+                                        @if (ViewData["CurrentSort"]?.ToString() == "category_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "category")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('category')" title="Filter Category">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-netName">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["NetNameSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Net Name
-                                    @if (ViewData["CurrentSort"]?.ToString() == "netName_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "netName")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["NetNameSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Net Name
+                                        @if (ViewData["CurrentSort"]?.ToString() == "netName_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "netName")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('netName')" title="Filter Net Name">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-assignedUser">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["AssignedUserSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Assigned User
-                                    @if (ViewData["CurrentSort"]?.ToString() == "assignedUser_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "assignedUser")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["AssignedUserSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Assigned User
+                                        @if (ViewData["CurrentSort"]?.ToString() == "assignedUser_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "assignedUser")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('assignedUser')" title="Filter Assigned User">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-assignedUserEmail">
                                 <a asp-action="Index" asp-route-sortOrder="@ViewData["AssignedUserEmailSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
@@ -537,38 +600,48 @@
                                 </a>
                             </th>
                             <th class="column-manager">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["ManagerSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Manager
-                                    @if (ViewData["CurrentSort"]?.ToString() == "manager_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "manager")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["ManagerSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Manager
+                                        @if (ViewData["CurrentSort"]?.ToString() == "manager_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "manager")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('manager')" title="Filter Manager">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-department">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["DepartmentSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Department
-                                    @if (ViewData["CurrentSort"]?.ToString() == "department_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "department")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["DepartmentSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Department
+                                        @if (ViewData["CurrentSort"]?.ToString() == "department_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "department")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('department')" title="Filter Department">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-unit">
                                 <a asp-action="Index" asp-route-sortOrder="@ViewData["UnitSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
@@ -588,64 +661,101 @@
                                 </a>
                             </th>
                             <th class="column-location">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["LocationSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Location
-                                    @if (ViewData["CurrentSort"]?.ToString() == "location_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "location")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["LocationSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Location
+                                        @if (ViewData["CurrentSort"]?.ToString() == "location_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "location")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('location')" title="Filter Location">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-floor">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["FloorSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Floor
-                                    @if (ViewData["CurrentSort"]?.ToString() == "floor_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "floor")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["FloorSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Floor
+                                        @if (ViewData["CurrentSort"]?.ToString() == "floor_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "floor")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('floor')" title="Filter Floor">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-desk">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["DeskSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Desk
-                                    @if (ViewData["CurrentSort"]?.ToString() == "desk_desc")
-                                    {
-                                        <i class="bi bi-sort-down"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "desk")
-                                    {
-                                        <i class="bi bi-sort-up"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-sort"></i>
-                                    }
-                                </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["DeskSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Desk
+                                        @if (ViewData["CurrentSort"]?.ToString() == "desk_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "desk")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('desk')" title="Filter Desk">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
                             </th>
                             <th class="column-status">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["StatusSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
-                                    Status
-                                    @if (ViewData["CurrentSort"]?.ToString() == "status_desc")
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["StatusSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                        Status
+                                        @if (ViewData["CurrentSort"]?.ToString() == "status_desc")
+                                        {
+                                            <i class="bi bi-sort-down"></i>
+                                        }
+                                        else if (ViewData["CurrentSort"]?.ToString() == "status")
+                                        {
+                                            <i class="bi bi-sort-up"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-sort"></i>
+                                        }
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('status')" title="Filter Status">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                </div>
+                            </th>
+                            <th class="column-lifecycle">
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["LifecycleSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    Lifecycle
+                                    @if (ViewData["CurrentSort"]?.ToString() == "lifecycle_desc")
                                     {
                                         <i class="bi bi-sort-down"></i>
                                     }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "status")
+                                    else if (ViewData["CurrentSort"]?.ToString() == "lifecycle")
                                     {
                                         <i class="bi bi-sort-up"></i>
                                     }
@@ -1064,13 +1174,11 @@
                                 </a>
                             </th>
                             <th class="column-actions">
-                                <div class="d-flex flex-column align-items-center">
-                                    <div class="mb-1">Actions</div>
-                                    <div class="d-flex gap-1">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="Column Settings">
-                                            <i class="bi bi-gear"></i>
-                                        </button>
-                                    </div>
+                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                    <span>Actions</span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="Column Settings">
+                                        <i class="bi bi-gear"></i>
+                                    </button>
                                 </div>
                             </th>
                         </tr>
@@ -1082,7 +1190,7 @@
                                 @if (User.IsInRole("Admin"))
                                 {
                                     <td>
-                                        <input type="checkbox" name="selectedIds" class="asset-checkbox" value="@asset.Id" onchange="updateBulkDeleteButton()" />
+                                        <input type="checkbox" name="selectedIds" class="asset-checkbox" value="@asset.Id" data-asset-tag="@asset.AssetTag" onchange="updateBulkDeleteButton(); toggleAssetSelection('@asset.AssetTag')" />
                                     </td>
                                 }
                                                                  <td class="column-assetTag editable-cell" data-field="AssetTag" data-id="@asset.Id" title="@asset.AssetTag"><strong>@asset.AssetTag</strong></td>
@@ -1114,6 +1222,35 @@
                                          };
                                      }
                                      <span class="badge @statusClass">@asset.Status</span>
+                                 </td>
+                                 <td class="column-lifecycle" data-id="@asset.Id" title="@asset.LifecycleState">
+                                     @{
+                                         var lifecycleClass = asset.LifecycleState switch
+                                         {
+                                             AssetLifecycleState.InStorage => "bg-info",
+                                             AssetLifecycleState.ReadyForShipment => "bg-warning",
+                                             AssetLifecycleState.InTransit => "bg-warning",
+                                             AssetLifecycleState.Delivered => "bg-primary",
+                                             AssetLifecycleState.Deployed => "bg-success",
+                                             AssetLifecycleState.RedeployPending => "bg-warning",
+                                             AssetLifecycleState.SalvagePending => "bg-danger",
+                                             AssetLifecycleState.Salvaged => "bg-secondary",
+                                             _ => "bg-light"
+                                         };
+                                         var lifecycleText = asset.LifecycleState switch
+                                         {
+                                             AssetLifecycleState.InStorage => "Storage",
+                                             AssetLifecycleState.ReadyForShipment => "Ready for Shipment",
+                                             AssetLifecycleState.InTransit => "In Transit",
+                                             AssetLifecycleState.Delivered => "Delivered",
+                                             AssetLifecycleState.Deployed => "Deployed",
+                                             AssetLifecycleState.RedeployPending => "Redeploy",
+                                             AssetLifecycleState.SalvagePending => "Salvage",
+                                             AssetLifecycleState.Salvaged => "Salvaged",
+                                             _ => asset.LifecycleState.ToString()
+                                         };
+                                     }
+                                     <span class="badge @lifecycleClass">@lifecycleText</span>
                                  </td>
                                  <td class="column-ipAddress editable-cell" data-field="IpAddress" data-id="@asset.Id" title="@asset.IpAddress">@asset.IpAddress</td>
                                  <td class="column-macAddress editable-cell" data-field="MacAddress" data-id="@asset.Id" title="@asset.MacAddress">@asset.MacAddress</td>
@@ -1155,6 +1292,40 @@
                                             <a asp-action="Delete" asp-route-id="@asset.Id" class="btn btn-outline-danger" title="Delete">
                                                 <i class="bi bi-trash"></i>
                                             </a>
+                                        }
+                                        
+                                        <!-- Lifecycle Actions Dropdown -->
+                                        @if (User.IsInRole("SiteTech") || User.IsInRole("JohnStOps") || User.IsInRole("Admin"))
+                                        {
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Lifecycle Actions">
+                                                    <i class="bi bi-arrow-repeat"></i>
+                                                </button>
+                                                <ul class="dropdown-menu lifecycle-actions" data-asset-tag="@asset.AssetTag">
+                                                    <li><a class="dropdown-item" href="#" onclick="deployAsset('@asset.AssetTag')"><i class="bi bi-laptop"></i> Deploy</a></li>
+                                                    <li><a class="dropdown-item" href="#" onclick="moveToStorage('@asset.AssetTag')"><i class="bi bi-box"></i> Move to Storage</a></li>
+                                                    <li><a class="dropdown-item" href="#" onclick="markReadyForShipment('@asset.AssetTag')"><i class="bi bi-truck"></i> Ready for Shipment</a></li>
+                                                    <li><a class="dropdown-item" href="#" onclick="markForSalvage('@asset.AssetTag')"><i class="bi bi-recycle"></i> Mark for Salvage</a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item" href="#" onclick="showLifecycleHistory('@asset.AssetTag')"><i class="bi bi-clock-history"></i> History</a></li>
+                                                </ul>
+                                            </div>
+                                        }
+                                        
+                                        <!-- Facilities Driver Actions -->
+                                        @if (User.IsInRole("FacilitiesDriver") || User.IsInRole("Admin"))
+                                        {
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Facilities Driver Actions">
+                                                    <i class="bi bi-truck"></i>
+                                                </button>
+                                                <ul class="dropdown-menu facilities-actions" data-asset-tag="@asset.AssetTag">
+                                                    <li><a class="dropdown-item" href="#" onclick="pickupAsset('@asset.AssetTag')"><i class="bi bi-box-arrow-up"></i> Pickup Asset</a></li>
+                                                    <li><a class="dropdown-item" href="#" onclick="deliverAsset('@asset.AssetTag')"><i class="bi bi-box-arrow-down"></i> Deliver Asset</a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item" href="#" onclick="reassignLocationAfterDelivery('@asset.AssetTag')"><i class="bi bi-geo-alt"></i> Reassign Location</a></li>
+                                                </ul>
+                                            </div>
                                         }
                                     </div>
                                 </td>
@@ -1282,27 +1453,37 @@
 @if (User.IsInRole("Admin"))
 {
     <script>
-        function toggleSelectAll() {
-            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-            const assetCheckboxes = document.querySelectorAll('.asset-checkbox');
-            
-            assetCheckboxes.forEach(checkbox => {
-                checkbox.checked = selectAllCheckbox.checked;
-            });
-            
-            updateBulkDeleteButton();
+            function toggleSelectAll() {
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const assetCheckboxes = document.querySelectorAll('.asset-checkbox');
+        
+        assetCheckboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+            const assetTag = checkbox.dataset.assetTag;
+            if (selectAllCheckbox.checked) {
+                selectedAssets.add(assetTag);
+            } else {
+                selectedAssets.delete(assetTag);
+            }
+        });
+        
+        updateBulkDeleteButton();
+        updateSelectionBasket();
+    }
+        
+            function updateBulkDeleteButton() {
+        const selectedCheckboxes = document.querySelectorAll('.asset-checkbox:checked');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        
+        if (selectedCheckboxes.length > 0) {
+            bulkDeleteBtn.style.display = 'inline';
+        } else {
+            bulkDeleteBtn.style.display = 'none';
         }
         
-        function updateBulkDeleteButton() {
-            const selectedCheckboxes = document.querySelectorAll('.asset-checkbox:checked');
-            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-            
-            if (selectedCheckboxes.length > 0) {
-                bulkDeleteBtn.style.display = 'inline';
-            } else {
-                bulkDeleteBtn.style.display = 'none';
-            }
-        }
+        // Also update the selection basket
+        updateSelectionBasket();
+    }
         
         function submitBulkDelete() {
             const selectedCheckboxes = document.querySelectorAll('.asset-checkbox:checked');
@@ -1346,6 +1527,7 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateBulkDeleteButton();
+            restoreCartItems();
         });
         
         function changePageSize(pageSize) {
@@ -1356,6 +1538,31 @@
         }
     </script>
 }
+
+<!-- Cart Preview Modal -->
+<div class="modal fade" id="cartPreviewModal" tabindex="-1" aria-labelledby="cartPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cartPreviewModalLabel">
+                    <i class="bi bi-cart3"></i> Cart Preview
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="cartPreviewContent">
+                    <!-- Cart items will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="selectMoreItems()">Select More..</button>
+                <button type="button" class="btn btn-primary" onclick="goToCart()">
+                    <i class="bi bi-cart-check"></i> Go to Cart
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Column Settings Modal -->
 <div class="modal fade" id="columnSettingsModal" tabindex="-1" aria-labelledby="columnSettingsModalLabel" aria-hidden="true">
@@ -1425,6 +1632,48 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" onclick="applyColumnSettings()">Apply Settings</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Filter Modal -->
+<div class="modal fade" id="columnFilterModal" tabindex="-1" aria-labelledby="columnFilterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="columnFilterModalLabel">Filter <span id="filterColumnName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Available Values</h6>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="filterSearch" placeholder="Search values..." onkeyup="filterAvailableValues()">
+                        </div>
+                        <div class="border rounded p-2" style="max-height: 300px; overflow-y: auto;">
+                            <div id="availableValues" class="d-flex flex-column gap-1">
+                                <!-- Available values will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Selected Values</h6>
+                        <div class="border rounded p-2" style="max-height: 300px; overflow-y: auto;">
+                            <div id="selectedValues" class="d-flex flex-column gap-1">
+                                <!-- Selected values will be populated here -->
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSelectedValues()">Clear All</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyColumnFilter()">Apply Filter</button>
             </div>
         </div>
     </div>
@@ -2060,7 +2309,7 @@
         const select = document.createElement('select');
         select.className = 'location-dropdown form-select form-select-sm';
         
-        const locations = ['LIC', 'BROOKLYN', 'BRONX', 'STATEN ISLAND', '66JOHN'];
+        const locations = ['100CHURCH', 'LIC', 'BROOKLYN', 'BRONX', 'STATEN ISLAND', '66JOHN'];
         locations.forEach(location => {
             const option = document.createElement('option');
             option.value = location;
@@ -2239,5 +2488,755 @@
             console.error('Error deleting all assets:', error);
             showToast('Error', 'Network error occurred', 'error');
         });
+    }
+    
+    // Lifecycle Functions
+    function markForSalvage(assetTag) {
+        if (confirm(`Are you sure you want to mark asset ${assetTag} for salvage?`)) {
+            fetch('/Assets/MarkForSalvage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                },
+                body: `assetTag=${encodeURIComponent(assetTag)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Success', data.message, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('Error', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error', 'Failed to mark asset for salvage', 'error');
+            });
+        }
+    }
+    
+    function deployAsset(assetTag) {
+        const desk = prompt('Enter desk location:');
+        if (desk) {
+            const userName = prompt('Enter user name:');
+            if (userName) {
+                const userEmail = prompt('Enter user email:');
+                if (userEmail) {
+                    fetch('/Assets/DeployAsset', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                        },
+                        body: JSON.stringify({
+                            assetTag: assetTag,
+                            desk: desk,
+                            userName: userName,
+                            userEmail: userEmail
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast('Success', data.message, 'success');
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('Error', data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('Error', 'Failed to deploy asset', 'error');
+                    });
+                }
+            }
+        }
+    }
+    
+    function moveToStorage(assetTag) {
+        if (confirm('Move asset to storage? (Floor will be set to "Storage" automatically)')) {
+            fetch('/Assets/MoveToStorage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                },
+                body: `assetTag=${encodeURIComponent(assetTag)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Success', data.message, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('Error', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error', 'Failed to move asset to storage', 'error');
+            });
+        }
+    }
+    
+    function markReadyForShipment(assetTag) {
+        if (confirm('Mark asset as ready for shipment pickup? (Only Facilities Drivers can pick up)')) {
+            fetch('/api/lifecycle/mark-ready-for-shipment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                },
+                body: JSON.stringify(assetTag)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showToast('Success', data.message, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('Error', 'Failed to mark asset ready for shipment', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error', 'Failed to mark asset ready for shipment', 'error');
+            });
+        }
+    }
+    
+    function pickupAsset(assetTag) {
+        const destinationSite = prompt('Enter destination site:');
+        if (destinationSite) {
+            const carrier = prompt('Enter carrier (optional):');
+            const trackingNumber = prompt('Enter tracking number (optional):');
+            
+            const request = {
+                assetTag: assetTag,
+                destinationSite: destinationSite,
+                carrier: carrier || null,
+                trackingNumber: trackingNumber || null
+            };
+            
+            fetch('/api/lifecycle/pickup-asset', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                },
+                body: JSON.stringify(request)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showToast('Success', data.message, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('Error', 'Failed to pickup asset', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error', 'Failed to pickup asset', 'error');
+            });
+        }
+    }
+    
+    function deliverAsset(assetTag) {
+        const toSite = prompt('Enter destination site:');
+        if (toSite) {
+            const deliveryLocation = prompt('Enter delivery location:');
+            if (deliveryLocation) {
+                const deliveryFloor = prompt('Enter delivery floor:');
+                if (deliveryFloor) {
+                    const deliveryDesk = prompt('Enter delivery desk (optional):');
+                    
+                    const request = {
+                        assetTag: assetTag,
+                        toSite: toSite,
+                        deliveryLocation: deliveryLocation,
+                        deliveryFloor: deliveryFloor,
+                        deliveryDesk: deliveryDesk || null
+                    };
+                    
+                    fetch('/api/lifecycle/deliver-asset', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                        },
+                        body: JSON.stringify(request)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message) {
+                            showToast('Success', data.message, 'success');
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('Error', 'Failed to deliver asset', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('Error', 'Failed to deliver asset', 'error');
+                    });
+                }
+            }
+        }
+    }
+    
+    function reassignLocationAfterDelivery(assetTag) {
+        const newLocation = prompt('Enter new location:');
+        if (newLocation) {
+            const newFloor = prompt('Enter new floor:');
+            if (newFloor) {
+                const newDesk = prompt('Enter new desk (optional):');
+                
+                const request = {
+                    assetTag: assetTag,
+                    newLocation: newLocation,
+                    newFloor: newFloor,
+                    newDesk: newDesk || null
+                };
+                
+                fetch('/api/lifecycle/reassign-location-after-delivery', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    },
+                    body: JSON.stringify(request)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        showToast('Success', data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast('Error', 'Failed to reassign location', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error', 'Failed to reassign location', 'error');
+                });
+            }
+        }
+    }
+    
+    function showLifecycleHistory(assetTag) {
+        // TODO: Implement lifecycle history view
+        alert(`Lifecycle history for ${assetTag} - Coming soon!`);
+    }
+    
+    // Selection Basket Functions
+    let selectedAssets = new Set();
+    
+    function updateSelectionBasket() {
+        const basket = document.getElementById('selectionBasket');
+        const count = document.getElementById('selectedCount');
+        const bulkActionsOption = document.getElementById('bulkActionsOption');
+        const bulkActionsCount = document.getElementById('bulkActionsCount');
+        
+        if (selectedAssets.size > 0) {
+            basket.classList.remove('d-none');
+            count.textContent = selectedAssets.size;
+            bulkActionsOption.style.display = 'block';
+            bulkActionsCount.textContent = selectedAssets.size;
+        } else {
+            basket.classList.add('d-none');
+            bulkActionsOption.style.display = 'none';
+        }
+    }
+    
+    function toggleAssetSelection(assetTag) {
+        if (selectedAssets.has(assetTag)) {
+            selectedAssets.delete(assetTag);
+        } else {
+            selectedAssets.add(assetTag);
+        }
+        updateSelectionBasket();
+    }
+    
+    function clearSelection() {
+        selectedAssets.clear();
+        updateSelectionBasket();
+        // Uncheck all checkboxes
+        document.querySelectorAll('.asset-checkbox').forEach(cb => cb.checked = false);
+        // Uncheck select all checkbox
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+        }
+        updateBulkDeleteButton();
+        
+        // Clear saved cart items from sessionStorage
+        sessionStorage.removeItem('assetCart');
+    }
+    
+    function clearSearch() {
+        window.location.href = '@Url.Action("Index", "Assets")';
+    }
+    
+    // Cart functionality
+    function showCartPreview() {
+        if (selectedAssets.size === 0) {
+            showToast('Info', 'No assets in cart', 'info');
+            return;
+        }
+        
+        // Get asset details for selected assets
+        const assetTags = Array.from(selectedAssets);
+        const cartContent = document.getElementById('cartPreviewContent');
+        
+        // Show loading
+        cartContent.innerHTML = '<div class="text-center"><i class="bi bi-hourglass-split"></i> Loading cart items...</div>';
+        
+        // Fetch asset details
+        fetch('/Assets/GetSelectedAssets', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+            },
+            body: JSON.stringify(assetTags)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayCartPreview(data.assets);
+            } else {
+                cartContent.innerHTML = '<div class="alert alert-danger">Error loading cart items</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            cartContent.innerHTML = '<div class="alert alert-danger">Error loading cart items</div>';
+        });
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('cartPreviewModal'));
+        modal.show();
+    }
+    
+    function displayCartPreview(assets) {
+        const cartContent = document.getElementById('cartPreviewContent');
+        
+        if (assets.length === 0) {
+            cartContent.innerHTML = '<div class="text-center text-muted">No items in cart</div>';
+            return;
+        }
+        
+        let html = `
+            <div class="row mb-3">
+                <div class="col-12">
+                    <h6>Selected Assets (${assets.length})</h6>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Asset Tag</th>
+                            <th>Category</th>
+                            <th>Manufacturer</th>
+                            <th>Model</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        assets.forEach(asset => {
+            html += `
+                <tr>
+                    <td><strong>${asset.assetTag}</strong></td>
+                    <td><span class="badge bg-secondary">${asset.category}</span></td>
+                    <td>${asset.manufacturer || '-'}</td>
+                    <td>${asset.model || '-'}</td>
+                    <td>${asset.location || '-'}</td>
+                    <td><span class="badge bg-success">${asset.status}</span></td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                Click "Go to Cart" to manage these assets and perform bulk operations.
+            </div>
+        `;
+        
+        cartContent.innerHTML = html;
+    }
+    
+    function goToCart() {
+        // Close the preview modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('cartPreviewModal'));
+        modal.hide();
+        
+        // Navigate to cart page with selected assets
+        const assetTags = Array.from(selectedAssets).join(',');
+        
+        // Clear sessionStorage since we're going to the cart page
+        sessionStorage.removeItem('assetCart');
+        
+        window.location.href = `@Url.Action("Cart", "Assets")?assetTags=${encodeURIComponent(assetTags)}`;
+    }
+    
+    function selectMoreItems() {
+        // Save current cart items to sessionStorage
+        const cartItems = Array.from(selectedAssets);
+        sessionStorage.setItem('assetCart', JSON.stringify(cartItems));
+        
+        // Close the preview modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('cartPreviewModal'));
+        modal.hide();
+        
+        // Show toast notification
+        showToast('Info', `${cartItems.length} items saved to cart. You can now select more items.`, 'info');
+    }
+    
+    function restoreCartItems() {
+        // Load saved cart items from sessionStorage
+        const savedCart = sessionStorage.getItem('assetCart');
+        if (savedCart) {
+            try {
+                const cartItems = JSON.parse(savedCart);
+                cartItems.forEach(assetTag => {
+                    selectedAssets.add(assetTag);
+                    // Check the corresponding checkbox if it exists
+                    const checkbox = document.querySelector(`input[type="checkbox"][value="${assetTag}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+                
+                // Update the UI to reflect the restored items
+                updateSelectionBasket();
+                
+                // Show notification if items were restored
+                if (cartItems.length > 0) {
+                    showToast('Info', `${cartItems.length} items restored from cart`, 'info');
+                }
+            } catch (error) {
+                console.error('Error restoring cart items:', error);
+                sessionStorage.removeItem('assetCart');
+            }
+        }
+    }
+    
+    function exportCurrentView() {
+        // Get current search term and sort order to maintain filtering
+        const searchTerm = document.querySelector('input[name="searchTerm"]')?.value || '';
+        const currentSort = '@ViewData["CurrentSort"]' || '';
+        
+        // Get current column configuration
+        const visibleColumns = currentColumns.filter(col => col.visible).map(col => col.id);
+        const columnConfig = visibleColumns.join(',');
+        
+        // If assets are selected, export only those; otherwise export current view
+        if (selectedAssets.size > 0) {
+            // Export selected assets
+            const params = new URLSearchParams({
+                assetTags: Array.from(selectedAssets).join(','),
+                searchTerm: searchTerm,
+                sortOrder: currentSort
+            });
+            
+            const exportUrl = '@Url.Action("ExportSelectedAssets", "Assets")?' + params.toString();
+            
+            const a = document.createElement('a');
+            a.href = exportUrl;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            showToast('Success', `Exporting ${selectedAssets.size} selected assets`, 'success');
+        } else {
+            // Export current view (all visible assets with current filters and column configuration)
+            const params = new URLSearchParams({
+                searchTerm: searchTerm,
+                sortOrder: currentSort,
+                columnConfig: columnConfig
+            });
+            
+            const exportUrl = '@Url.Action("ExportCurrentView", "Assets")?' + params.toString();
+            
+            const a = document.createElement('a');
+            a.href = exportUrl;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            showToast('Success', 'Exporting current view', 'success');
+        }
+    }
+    
+    function exportAllAssets() {
+        // Export all assets with all columns
+        const exportUrl = '@Url.Action("ExportAll", "Assets")';
+        
+        const a = document.createElement('a');
+        a.href = exportUrl;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        showToast('Success', 'Exporting all assets', 'success');
+    }
+    
+    function showBulkActions() {
+        if (selectedAssets.size === 0) {
+            showToast('Info', 'No assets selected', 'info');
+            return;
+        }
+        
+        const actions = [
+            { name: 'Mark for Salvage', action: 'salvage', icon: 'bi-recycle' },
+            { name: 'Move to Storage', action: 'storage', icon: 'bi-box' }
+        ];
+        
+        // Create modal for bulk actions
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Bulk Actions (${selectedAssets.size} assets)</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="list-group">
+                            ${actions.map(action => `
+                                <a href="#" class="list-group-item list-group-item-action" onclick="bulkAction('${action.action}')">
+                                    <i class="${action.icon}"></i> ${action.name}
+                                </a>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        
+        modal.addEventListener('hidden.bs.modal', function() {
+            modal.remove();
+        });
+    }
+    
+    function bulkAction(action) {
+        const assetTags = Array.from(selectedAssets);
+        
+        switch (action) {
+            case 'salvage':
+                if (confirm(`Mark ${assetTags.length} assets for salvage?`)) {
+                    fetch('/Assets/BulkMarkForSalvage', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                        },
+                        body: JSON.stringify(assetTags)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast('Success', data.message, 'success');
+                            clearSelection();
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('Error', data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('Error', 'Failed to mark assets for salvage', 'error');
+                    });
+                }
+                break;
+            case 'storage':
+                const storageLocation = prompt('Enter storage location:');
+                if (storageLocation) {
+                    // TODO: Implement bulk move to storage
+                    showToast('Info', 'Bulk move to storage coming soon!', 'info');
+                }
+                break;
+
+        }
+        
+        // Close modal
+        const modal = document.querySelector('.modal');
+        if (modal) {
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+        }
+    }
+    
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        updateBulkDeleteButton();
+        initializeTableNavigation();
+        updateSelectionBasket();
+    });
+
+    // Column Filter Functions
+    let currentFilterColumn = '';
+    let currentFilterValues = [];
+    let allFilterValues = [];
+
+    function showColumnFilter(columnId) {
+        currentFilterColumn = columnId;
+        const columnNames = {
+            'assetTag': 'Asset Tag',
+            'serialNumber': 'Serial Number',
+            'serviceTag': 'Service Tag',
+            'manufacturer': 'Manufacturer',
+            'model': 'Model',
+            'category': 'Category',
+            'netName': 'Net Name',
+            'assignedUser': 'Assigned User',
+            'department': 'Department',
+            'location': 'Location',
+            'floor': 'Floor',
+            'status': 'Status',
+            'vendor': 'Vendor',
+            'warrantyEnd': 'Warranty End'
+        };
+
+        document.getElementById('filterColumnName').textContent = columnNames[columnId] || columnId;
+        
+        // Load filter values from server
+        fetch(`/Assets/GetFilterValues?column=${columnId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    allFilterValues = data.values;
+                    currentFilterValues = [];
+                    populateAvailableValues();
+                    populateSelectedValues();
+                    
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('columnFilterModal'));
+                    modal.show();
+                } else {
+                    showToast('Error', 'Failed to load filter values', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error', 'Failed to load filter values', 'error');
+            });
+    }
+
+    function populateAvailableValues() {
+        const container = document.getElementById('availableValues');
+        container.innerHTML = '';
+        
+        allFilterValues.forEach(value => {
+            if (!currentFilterValues.includes(value)) {
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `
+                    <input class="form-check-input" type="checkbox" value="${value}" id="available_${value.replace(/[^a-zA-Z0-9]/g, '_')}" onchange="toggleValue('${value}', true)">
+                    <label class="form-check-label" for="available_${value.replace(/[^a-zA-Z0-9]/g, '_')}">
+                        ${value}
+                    </label>
+                `;
+                container.appendChild(div);
+            }
+        });
+    }
+
+    function populateSelectedValues() {
+        const container = document.getElementById('selectedValues');
+        container.innerHTML = '';
+        
+        currentFilterValues.forEach(value => {
+            const div = document.createElement('div');
+            div.className = 'form-check';
+            div.innerHTML = `
+                <input class="form-check-input" type="checkbox" value="${value}" id="selected_${value.replace(/[^a-zA-Z0-9]/g, '_')}" onchange="toggleValue('${value}', false)" checked>
+                <label class="form-check-label" for="selected_${value.replace(/[^a-zA-Z0-9]/g, '_')}">
+                    ${value}
+                </label>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function toggleValue(value, isAvailable) {
+        if (isAvailable) {
+            // Moving from available to selected
+            currentFilterValues.push(value);
+        } else {
+            // Moving from selected to available
+            currentFilterValues = currentFilterValues.filter(v => v !== value);
+        }
+        
+        populateAvailableValues();
+        populateSelectedValues();
+    }
+
+    function filterAvailableValues() {
+        const searchTerm = document.getElementById('filterSearch').value.toLowerCase();
+        const checkboxes = document.querySelectorAll('#availableValues input[type="checkbox"]');
+        
+        checkboxes.forEach(checkbox => {
+            const label = checkbox.nextElementSibling;
+            const value = label.textContent.toLowerCase();
+            const shouldShow = value.includes(searchTerm);
+            label.parentElement.style.display = shouldShow ? 'block' : 'none';
+        });
+    }
+
+    function clearSelectedValues() {
+        currentFilterValues = [];
+        populateAvailableValues();
+        populateSelectedValues();
+    }
+
+    function applyColumnFilter() {
+        if (currentFilterValues.length === 0) {
+            // Remove filter
+            removeColumnFilter(currentFilterColumn);
+        } else {
+            // Apply filter
+            const filterParam = currentFilterValues.join(',');
+            applyColumnFilterToUrl(currentFilterColumn, filterParam);
+        }
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('columnFilterModal'));
+        modal.hide();
+    }
+
+    function applyColumnFilterToUrl(column, values) {
+        const url = new URL(window.location);
+        const paramName = `filter${column.charAt(0).toUpperCase() + column.slice(1)}`;
+        url.searchParams.set(paramName, values);
+        url.searchParams.set('page', '1'); // Reset to first page
+        window.location.href = url.toString();
+    }
+
+    function removeColumnFilter(column) {
+        const url = new URL(window.location);
+        const paramName = `filter${column.charAt(0).toUpperCase() + column.slice(1)}`;
+        url.searchParams.delete(paramName);
+        url.searchParams.set('page', '1'); // Reset to first page
+        window.location.href = url.toString();
     }
 </script>
