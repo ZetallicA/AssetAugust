@@ -980,100 +980,7 @@ public class AssetsController : Controller
         return _context.Assets.Any(e => e.Id == id);
     }
 
-    // POST: Assets/BulkDelete
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> BulkDelete(int[] selectedIds)
-    {
-        if (selectedIds == null || selectedIds.Length == 0)
-        {
-            TempData["ErrorMessage"] = "No assets selected for deletion.";
-            return RedirectToAction(nameof(Index));
-        }
 
-        try
-        {
-            var assetsToDelete = await _context.Assets
-                .Where(a => selectedIds.Contains(a.Id))
-                .ToListAsync();
-
-            if (!assetsToDelete.Any())
-            {
-                TempData["ErrorMessage"] = "No valid assets found for deletion.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            var beforeCount = await _context.Assets.CountAsync();
-            var assetIds = assetsToDelete.Select(a => a.Id).ToList();
-            var assetTags = assetsToDelete.Select(a => a.AssetTag).ToList();
-
-            // Delete related records first to avoid foreign key constraint violations
-            // Delete AssetEvents (has Restrict constraint)
-            var assetEvents = await _context.AssetEvents
-                .Where(ae => assetTags.Contains(ae.AssetTag))
-                .ToListAsync();
-            if (assetEvents.Any())
-            {
-                _context.AssetEvents.RemoveRange(assetEvents);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Deleted {Count} AssetEvents for bulk delete operation", assetEvents.Count);
-            }
-
-            // Delete AssetTransfers (has Restrict constraint)
-            var assetTransfers = await _context.AssetTransfers
-                .Where(at => assetTags.Contains(at.AssetTag))
-                .ToListAsync();
-            if (assetTransfers.Any())
-            {
-                _context.AssetTransfers.RemoveRange(assetTransfers);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Deleted {Count} AssetTransfers for bulk delete operation", assetTransfers.Count);
-            }
-
-            // Delete AssetHistory records (has Restrict constraint)
-            var assetHistoryRecords = await _context.AssetHistory
-                .Where(ah => assetIds.Contains(ah.AssetId))
-                .ToListAsync();
-            if (assetHistoryRecords.Any())
-            {
-                _context.AssetHistory.RemoveRange(assetHistoryRecords);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Deleted {Count} AssetHistory records for bulk delete operation", 
-                    assetHistoryRecords.Count);
-            }
-
-            // Delete AssetRequests
-            var assetRequests = await _context.AssetRequests
-                .Where(ar => ar.AssetId.HasValue && assetIds.Contains(ar.AssetId.Value))
-                .ToListAsync();
-            if (assetRequests.Any())
-            {
-                _context.AssetRequests.RemoveRange(assetRequests);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Deleted {Count} AssetRequests for bulk delete operation", assetRequests.Count);
-            }
-
-            // Finally delete the assets
-            _context.Assets.RemoveRange(assetsToDelete);
-            var result = await _context.SaveChangesAsync();
-
-            var afterCount = await _context.Assets.CountAsync();
-            var deletedCount = assetsToDelete.Count;
-
-            _logger.LogInformation("Bulk permanently deleted {Count} assets by {User}. Before: {BeforeCount}, After: {AfterCount}, Result: {Result}", 
-                deletedCount, User.Identity?.Name, beforeCount, afterCount, result);
-            TempData["SuccessMessage"] = $"Successfully deleted {deletedCount} assets and related records. Database count: {beforeCount} → {afterCount}";
-
-            return RedirectToAction(nameof(Index));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during bulk delete operation");
-            TempData["ErrorMessage"] = $"Error during bulk delete: {ex.Message}";
-            return RedirectToAction(nameof(Index));
-        }
-    }
 
 
 
@@ -2560,9 +2467,9 @@ public class AssetsController : Controller
     {
         try
         {
-            var success = await _lifecycleService.TransitionToState(
+            var success = await _lifecycleService.RedeployAsset(
                 assetTag, 
-                AssetLifecycleState.InStorage, 
+                null, // null desk means move to storage
                 User.Identity?.Name ?? "Unknown"
             );
             
@@ -2646,9 +2553,9 @@ public class AssetsController : Controller
 
             foreach (var assetTag in assetTags)
             {
-                var success = await _lifecycleService.TransitionToState(
+                var success = await _lifecycleService.RedeployAsset(
                     assetTag, 
-                    AssetLifecycleState.InStorage, 
+                    null, // null desk means move to storage
                     User.Identity?.Name ?? "Unknown"
                 );
                 
@@ -2673,6 +2580,115 @@ public class AssetsController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in bulk move to storage");
+            return Json(new { success = false, message = "Error: " + ex.Message });
+        }
+    }
+
+    // POST: Assets/BulkDelete
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> BulkDelete([FromBody] List<string> assetTags)
+    {
+        try
+        {
+            if (assetTags == null || !assetTags.Any())
+            {
+                return Json(new { success = false, message = "No asset tags provided" });
+            }
+
+            var results = new List<object>();
+            var successCount = 0;
+            var failCount = 0;
+
+            foreach (var assetTag in assetTags)
+            {
+                try
+                {
+                    var asset = await _context.Assets.FirstOrDefaultAsync(a => a.AssetTag == assetTag);
+                    if (asset == null)
+                    {
+                        failCount++;
+                        results.Add(new { assetTag, success = false, message = "Asset not found" });
+                        continue;
+                    }
+
+                    // Check if asset can be deleted (not deployed or in use)
+                    if (asset.LifecycleState == AssetLifecycleState.Deployed)
+                    {
+                        failCount++;
+                        results.Add(new { assetTag, success = false, message = $"Cannot delete deployed asset (Status: {asset.LifecycleState})" });
+                        continue;
+                    }
+
+                    // Delete related records first to avoid foreign key constraint violations
+                    // Delete AssetEvents
+                    var assetEvents = await _context.AssetEvents
+                        .Where(ae => ae.AssetTag == assetTag)
+                        .ToListAsync();
+                    if (assetEvents.Any())
+                    {
+                        _context.AssetEvents.RemoveRange(assetEvents);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    // Delete AssetTransfers
+                    var assetTransfers = await _context.AssetTransfers
+                        .Where(at => at.AssetTag == assetTag)
+                        .ToListAsync();
+                    if (assetTransfers.Any())
+                    {
+                        _context.AssetTransfers.RemoveRange(assetTransfers);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    // Delete AssetHistory records
+                    var assetHistoryRecords = await _context.AssetHistory
+                        .Where(ah => ah.AssetId == asset.Id)
+                        .ToListAsync();
+                    if (assetHistoryRecords.Any())
+                    {
+                        _context.AssetHistory.RemoveRange(assetHistoryRecords);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    // Delete AssetRequests
+                    var assetRequests = await _context.AssetRequests
+                        .Where(ar => ar.AssetId == asset.Id)
+                        .ToListAsync();
+                    if (assetRequests.Any())
+                    {
+                        _context.AssetRequests.RemoveRange(assetRequests);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    // Log the deletion for audit purposes
+                    _logger.LogWarning("Asset {AssetTag} deleted by user {User}", assetTag, User.Identity?.Name ?? "Unknown");
+
+                    // Finally remove the asset
+                    _context.Assets.Remove(asset);
+                    await _context.SaveChangesAsync();
+
+                    successCount++;
+                    results.Add(new { assetTag, success = true });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error deleting asset {AssetTag}", assetTag);
+                    failCount++;
+                    var errorMessage = ex.InnerException?.Message ?? ex.Message;
+                    results.Add(new { assetTag, success = false, message = $"Error: {errorMessage}" });
+                }
+            }
+
+            return Json(new { 
+                success = true, 
+                message = $"Deleted {successCount} assets, {failCount} failed",
+                results 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk delete");
             return Json(new { success = false, message = "Error: " + ex.Message });
         }
     }

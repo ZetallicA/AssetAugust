@@ -68,6 +68,20 @@ public class Asset
     [StringLength(50)]
     public string? Status { get; set; }
     
+    // Computed property that maps LifecycleState to display status
+    public string DisplayStatus => LifecycleState switch
+    {
+        AssetLifecycleState.InStorage => "In Storage",
+        AssetLifecycleState.ReadyForShipment => "Ready for Shipment",
+        AssetLifecycleState.InTransit => "In Transit",
+        AssetLifecycleState.Delivered => "Delivered",
+        AssetLifecycleState.Deployed => "Active",
+        AssetLifecycleState.RedeployPending => "Redeploy Pending",
+        AssetLifecycleState.SalvagePending => "Salvage Pending",
+        AssetLifecycleState.Salvaged => "Salvaged",
+        _ => "Unknown"
+    };
+    
     [StringLength(45)]
     public string? IpAddress { get; set; }
     

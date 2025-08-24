@@ -20,6 +20,11 @@ public class DashboardController : Controller
 
     public async Task<IActionResult> Index()
     {
+        // Log authentication status
+        var isAuthenticated = HttpContext.User?.Identity?.IsAuthenticated ?? false;
+        _logger.LogInformation("Dashboard.Index - User authenticated: {IsAuthenticated}, Name: {UserName}", 
+            isAuthenticated, HttpContext.User?.Identity?.Name);
+        
         // Simple dashboard without complex models for now
         return View();
     }
@@ -53,6 +58,19 @@ public class DashboardController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Reports()
     {
+        // Temporary: Allow access for specific users
+        var userEmail = User.Identity?.Name;
+        if (userEmail == "rabi@oathone.com")
+        {
+            return View();
+        }
+        
+        // Check if user has required roles
+        if (!User.IsInRole("Admin") && !User.IsInRole("Manager"))
+        {
+            return Forbid();
+        }
+        
         // Simple reports view for now
         return View();
     }

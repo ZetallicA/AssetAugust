@@ -34,11 +34,11 @@ public class AssetLifecycleService
         // Define allowed transitions based on new workflow
         var allowedTransitions = new Dictionary<AssetLifecycleState, AssetLifecycleState[]>
         {
-            { AssetLifecycleState.InStorage, new[] { AssetLifecycleState.ReadyForShipment, AssetLifecycleState.Deployed } },
+            { AssetLifecycleState.InStorage, new[] { AssetLifecycleState.ReadyForShipment, AssetLifecycleState.Deployed, AssetLifecycleState.SalvagePending } },
             { AssetLifecycleState.ReadyForShipment, new[] { AssetLifecycleState.InTransit } }, // Only Facilities Drivers can pick up
             { AssetLifecycleState.InTransit, new[] { AssetLifecycleState.Delivered } },
             { AssetLifecycleState.Delivered, new[] { AssetLifecycleState.InStorage, AssetLifecycleState.Deployed } },
-            { AssetLifecycleState.Deployed, new[] { AssetLifecycleState.RedeployPending, AssetLifecycleState.SalvagePending, AssetLifecycleState.ReadyForShipment } },
+            { AssetLifecycleState.Deployed, new[] { AssetLifecycleState.RedeployPending, AssetLifecycleState.SalvagePending, AssetLifecycleState.ReadyForShipment, AssetLifecycleState.InStorage } },
             { AssetLifecycleState.RedeployPending, new[] { AssetLifecycleState.Deployed, AssetLifecycleState.InStorage, AssetLifecycleState.ReadyForShipment } },
             { AssetLifecycleState.SalvagePending, new[] { AssetLifecycleState.ReadyForShipment } }, // Cannot be redeployed, only shipped for salvage
             { AssetLifecycleState.Salvaged, new AssetLifecycleState[] { } } // Terminal state - no further transitions

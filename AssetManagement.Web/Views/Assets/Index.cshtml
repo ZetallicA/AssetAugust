@@ -33,6 +33,23 @@
         background-color: #f8f9fa;
     }
     
+    /* Admin Operations Collapsible Styles */
+    .admin-operations-header {
+        transition: background-color 0.2s ease;
+    }
+    
+    .admin-operations-header:hover {
+        background-color: #ffc107 !important;
+    }
+    
+    .admin-operations-body {
+        transition: all 0.3s ease;
+    }
+    
+    .admin-operations-icon {
+        transition: transform 0.2s ease;
+    }
+    
          .table-container {
          overflow-x: auto;
          scroll-behavior: smooth;
@@ -265,10 +282,13 @@
 @if (User.IsInRole("Admin"))
 {
     <div class="card shadow mb-3">
-        <div class="card-header bg-warning text-dark">
-            <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> System Admin Operations</h6>
+        <div class="card-header bg-warning text-dark admin-operations-header" style="cursor: pointer;" onclick="toggleAdminOperations()">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> System Admin Operations</h6>
+                <i class="bi bi-chevron-down admin-operations-icon" id="adminOperationsIcon"></i>
+            </div>
         </div>
-        <div class="card-body">
+        <div class="card-body admin-operations-body" id="adminOperationsBody">
             <div class="d-flex gap-2 mb-3">
                 <button type="button" class="btn btn-danger" id="bulkDeleteBtn" onclick="submitBulkDelete()" style="display: none;">
                     <i class="bi bi-trash"></i> Delete Selected
@@ -1281,7 +1301,7 @@
                                         <a asp-action="Details" asp-route-id="@asset.Id" class="btn btn-outline-primary" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        @if (User.IsInRole("Admin") || User.IsInRole("IT") || User.IsInRole("Procurement"))
+                                        @if (User.IsInRole("Admin"))
                                         {
                                             <a asp-action="Edit" asp-route-id="@asset.Id" class="btn btn-outline-secondary" title="Edit">
                                                 <i class="bi bi-pencil"></i>
@@ -1302,10 +1322,26 @@
                                                     <i class="bi bi-arrow-repeat"></i>
                                                 </button>
                                                 <ul class="dropdown-menu lifecycle-actions" data-asset-tag="@asset.AssetTag">
-                                                    <li><a class="dropdown-item" href="#" onclick="deployAsset('@asset.AssetTag')"><i class="bi bi-laptop"></i> Deploy</a></li>
-                                                    <li><a class="dropdown-item" href="#" onclick="moveToStorage('@asset.AssetTag')"><i class="bi bi-box"></i> Move to Storage</a></li>
-                                                    <li><a class="dropdown-item" href="#" onclick="markReadyForShipment('@asset.AssetTag')"><i class="bi bi-truck"></i> Ready for Shipment</a></li>
-                                                    <li><a class="dropdown-item" href="#" onclick="markForSalvage('@asset.AssetTag')"><i class="bi bi-recycle"></i> Mark for Salvage</a></li>
+                                                    @if (asset.Floor?.ToLower() == "storage")
+                                                    {
+                                                        <!-- Assets in Storage -->
+                                                        <li><a class="dropdown-item" href="#" onclick="deployAsset('@asset.AssetTag')"><i class="bi bi-laptop"></i> Assign To</a></li>
+                                                        <li><a class="dropdown-item" href="#" onclick="markForSalvage('@asset.AssetTag')"><i class="bi bi-recycle"></i> Mark for Salvage</a></li>
+                                                    }
+                                                    else
+                                                    {
+                                                        <!-- Assets not in Storage -->
+                                                        @if (!string.IsNullOrEmpty(asset.AssignedUserName) && asset.AssignedUserName.ToLower() != "vacant")
+                                                        {
+                                                            <li><a class="dropdown-item" href="#" onclick="deployAsset('@asset.AssetTag')"><i class="bi bi-laptop"></i> Re-Assign To</a></li>
+                                                        }
+                                                        else
+                                                        {
+                                                            <li><a class="dropdown-item" href="#" onclick="deployAsset('@asset.AssetTag')"><i class="bi bi-laptop"></i> Assign To</a></li>
+                                                        }
+                                                        <li><a class="dropdown-item" href="#" onclick="moveToStorage('@asset.AssetTag')"><i class="bi bi-box"></i> Move to Storage</a></li>
+                                                        <li><a class="dropdown-item" href="#" onclick="markForSalvage('@asset.AssetTag')"><i class="bi bi-recycle"></i> Mark for Salvage</a></li>
+                                                    }
                                                     <li><hr class="dropdown-divider"></li>
                                                     <li><a class="dropdown-item" href="#" onclick="showLifecycleHistory('@asset.AssetTag')"><i class="bi bi-clock-history"></i> History</a></li>
                                                 </ul>
@@ -1453,7 +1489,39 @@
 @if (User.IsInRole("Admin"))
 {
     <script>
-            function toggleSelectAll() {
+        function toggleAdminOperations() {
+            const body = document.getElementById('adminOperationsBody');
+            const icon = document.getElementById('adminOperationsIcon');
+            
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                icon.className = 'bi bi-chevron-down admin-operations-icon';
+                localStorage.setItem('adminOperationsCollapsed', 'false');
+            } else {
+                body.style.display = 'none';
+                icon.className = 'bi bi-chevron-right admin-operations-icon';
+                localStorage.setItem('adminOperationsCollapsed', 'true');
+            }
+        }
+        
+        function initializeAdminOperations() {
+            const body = document.getElementById('adminOperationsBody');
+            const icon = document.getElementById('adminOperationsIcon');
+            const savedState = localStorage.getItem('adminOperationsCollapsed');
+            
+            // Default to collapsed (null means first visit, so collapse by default)
+            const isCollapsed = savedState === null ? true : savedState === 'true';
+            
+            if (isCollapsed) {
+                body.style.display = 'none';
+                icon.className = 'bi bi-chevron-right admin-operations-icon';
+            } else {
+                body.style.display = 'block';
+                icon.className = 'bi bi-chevron-down admin-operations-icon';
+            }
+        }
+        
+        function toggleSelectAll() {
         const selectAllCheckbox = document.getElementById('selectAllCheckbox');
         const assetCheckboxes = document.querySelectorAll('.asset-checkbox');
         
@@ -1528,6 +1596,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             updateBulkDeleteButton();
             restoreCartItems();
+            initializeAdminOperations();
         });
         
         function changePageSize(pageSize) {

@@ -1,4 +1,20 @@
 @model List<AssetManagement.Domain.Entities.Asset>
+@using AssetManagement.Domain.Entities
+
+@{
+    string GetStatusBadgeClass(AssetLifecycleState state) => state switch
+    {
+        AssetLifecycleState.InStorage => "bg-secondary",
+        AssetLifecycleState.ReadyForShipment => "bg-warning",
+        AssetLifecycleState.InTransit => "bg-info",
+        AssetLifecycleState.Delivered => "bg-primary",
+        AssetLifecycleState.Deployed => "bg-success",
+        AssetLifecycleState.RedeployPending => "bg-warning",
+        AssetLifecycleState.SalvagePending => "bg-danger",
+        AssetLifecycleState.Salvaged => "bg-dark",
+        _ => "bg-secondary"
+    };
+}
 
 @{
     ViewData["Title"] = "Asset Cart";
@@ -86,7 +102,7 @@
                                     <div class="asset-details">
                                         <div><strong>@asset.Manufacturer @asset.Model</strong></div>
                                         <div>Location: @asset.Location - @asset.Floor</div>
-                                        <div>Status: <span class="badge bg-success">@asset.Status</span></div>
+                                        <div>Status: <span class="badge @GetStatusBadgeClass(asset.LifecycleState)">@asset.DisplayStatus</span></div>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
@@ -313,6 +329,8 @@ else
         
         showToast('Success', `Exporting ${selectedAssets.size} selected assets`, 'success');
     }
+    
+
     
     function checkoutAssets() {
         if (selectedAssets.size === 0) {
