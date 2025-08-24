@@ -477,7 +477,7 @@
                             }
                             <th class="column-assetTag">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["AssetTagSortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["AssetTagSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterAssetTag"] != null ? "text-primary fw-bold" : "")">
                                         Asset Tag
                                         @if (ViewData["CurrentSort"]?.ToString() == "assetTag_desc")
                                         {
@@ -492,14 +492,18 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('assetTag')" title="Filter Asset Tag">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterAssetTag"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('assetTag')" title="@(ViewData["FilterAssetTag"] != null ? "| Filter Asset Tag" : "Filter Asset Tag")">
+                                        @if (ViewData["FilterAssetTag"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterAssetTag"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
                             </th>
                             <th class="column-serialNumber">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["SerialNumberSortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["SerialNumberSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterSerialNumber"] != null ? "text-primary fw-bold" : "")">
                                         Serial Number
                                         @if (ViewData["CurrentSort"]?.ToString() == "serialNumber_desc")
                                         {
@@ -514,14 +518,18 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('serialNumber')" title="Filter Serial Number">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterSerialNumber"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('serialNumber')" title="@(ViewData["FilterSerialNumber"] != null ? "| Filter Serial Number" : "Filter Serial Number")">
+                                        @if (ViewData["FilterSerialNumber"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterSerialNumber"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
                             </th>
                             <th class="column-serviceTag">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ServiceTagSortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ServiceTagSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterServiceTag"] != null ? "text-primary fw-bold" : "")">
                                         Service Tag
                                         @if (ViewData["CurrentSort"]?.ToString() == "serviceTag_desc")
                                         {
@@ -536,14 +544,18 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('serviceTag')" title="Filter Service Tag">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterServiceTag"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('serviceTag')" title="@(ViewData["FilterServiceTag"] != null ? "| Filter Service Tag" : "Filter Service Tag")">
+                                        @if (ViewData["FilterServiceTag"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterServiceTag"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
                             </th>
                             <th class="column-manufacturer">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ManufacturerSortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ManufacturerSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterManufacturer"] != null ? "text-primary fw-bold" : "")">
                                         Manufacturer
                                         @if (ViewData["CurrentSort"]?.ToString() == "manufacturer_desc")
                                         {
@@ -558,14 +570,18 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('manufacturer')" title="Filter Manufacturer">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterManufacturer"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('manufacturer')" title="@(ViewData["FilterManufacturer"] != null ? "| Filter Manufacturer" : "Filter Manufacturer")">
+                                        @if (ViewData["FilterManufacturer"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterManufacturer"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
                             </th>
                             <th class="column-model">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ModelSortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ModelSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterModel"] != null ? "text-primary fw-bold" : "")">
                                         Model
                                         @if (ViewData["CurrentSort"]?.ToString() == "model_desc")
                                         {
@@ -580,14 +596,18 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('model')" title="Filter Model">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterModel"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('model')" title="@(ViewData["FilterModel"] != null ? "| Filter Model" : "Filter Model")">
+                                        @if (ViewData["FilterModel"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterModel"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
                             </th>
                             <th class="column-category">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["CategorySortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["CategorySortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterCategory"] != null ? "text-primary fw-bold" : "")">
                                         Category
                                         @if (ViewData["CurrentSort"]?.ToString() == "category_desc")
                                         {
@@ -602,14 +622,18 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('category')" title="Filter Category">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterCategory"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('category')" title="@(ViewData["FilterCategory"] != null ? "| Filter Category" : "Filter Category")">
+                                        @if (ViewData["FilterCategory"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterCategory"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
                             </th>
                             <th class="column-netName">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["NetNameSortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["NetNameSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterNetName"] != null ? "text-primary fw-bold" : "")">
                                         Net Name
                                         @if (ViewData["CurrentSort"]?.ToString() == "netName_desc")
                                         {
@@ -624,14 +648,18 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('netName')" title="Filter Net Name">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterNetName"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('netName')" title="@(ViewData["FilterNetName"] != null ? "| Filter Net Name" : "Filter Net Name")">
+                                        @if (ViewData["FilterNetName"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterNetName"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
                             </th>
                             <th class="column-assignedUser">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["AssignedUserSortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["AssignedUserSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterAssignedUser"] != null ? "text-primary fw-bold" : "")">
                                         Assigned User
                                         @if (ViewData["CurrentSort"]?.ToString() == "assignedUser_desc")
                                         {
@@ -646,7 +674,11 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('assignedUser')" title="Filter Assigned User">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterAssignedUser"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('assignedUser')" title="@(ViewData["FilterAssignedUser"] != null ? "| Filter Assigned User" : "Filter Assigned User")">
+                                        @if (ViewData["FilterAssignedUser"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterAssignedUser"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
@@ -670,7 +702,7 @@
                             </th>
                             <th class="column-manager">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ManagerSortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ManagerSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterManager"] != null ? "text-primary fw-bold" : "")">
                                         Manager
                                         @if (ViewData["CurrentSort"]?.ToString() == "manager_desc")
                                         {
@@ -685,14 +717,18 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('manager')" title="Filter Manager">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterManager"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('manager')" title="@(ViewData["FilterManager"] != null ? "| Filter Manager" : "Filter Manager")">
+                                        @if (ViewData["FilterManager"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterManager"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
                             </th>
                             <th class="column-department">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["DepartmentSortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["DepartmentSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterDepartment"] != null ? "text-primary fw-bold" : "")">
                                         Department
                                         @if (ViewData["CurrentSort"]?.ToString() == "department_desc")
                                         {
@@ -707,7 +743,11 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('department')" title="Filter Department">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterDepartment"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('department')" title="@(ViewData["FilterDepartment"] != null ? "| Filter Department" : "Filter Department")">
+                                        @if (ViewData["FilterDepartment"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterDepartment"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
@@ -731,7 +771,7 @@
                             </th>
                             <th class="column-location">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["LocationSortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["LocationSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterLocation"] != null ? "text-primary fw-bold" : "")">
                                         Location
                                         @if (ViewData["CurrentSort"]?.ToString() == "location_desc")
                                         {
@@ -746,14 +786,18 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('location')" title="Filter Location">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterLocation"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('location')" title="@(ViewData["FilterLocation"] != null ? "| Filter Location" : "Filter Location")">
+                                        @if (ViewData["FilterLocation"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterLocation"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
                             </th>
                             <th class="column-floor">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["FloorSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["FloorSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header @(ViewData["FilterFloor"] != null ? "text-primary fw-bold" : "")">
                                         Floor
                                         @if (ViewData["CurrentSort"]?.ToString() == "floor_desc")
                                         {
@@ -768,14 +812,18 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('floor')" title="Filter Floor">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterFloor"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('floor')" title="@(ViewData["FilterFloor"] != null ? "| Filter Floor" : "Filter Floor")">
+                                        @if (ViewData["FilterFloor"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterFloor"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
                             </th>
                             <th class="column-desk">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["DeskSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["DeskSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header @(ViewData["FilterDesk"] != null ? "text-primary fw-bold" : "")">
                                         Desk
                                         @if (ViewData["CurrentSort"]?.ToString() == "desk_desc")
                                         {
@@ -790,14 +838,18 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('desk')" title="Filter Desk">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterDesk"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('desk')" title="@(ViewData["FilterDesk"] != null ? "| Filter Desk" : "Filter Desk")">
+                                        @if (ViewData["FilterDesk"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterDesk"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
                             </th>
                             <th class="column-status">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["StatusSortParm"]?.ToString())" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["StatusSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterStatus"] != null ? "text-primary fw-bold" : "")">
                                         Status
                                         @if (ViewData["CurrentSort"]?.ToString() == "status_desc")
                                         {
@@ -812,7 +864,11 @@
                                             <i class="bi bi-sort"></i>
                                         }
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="showColumnFilter('status')" title="Filter Status">
+                                    <button type="button" class="btn btn-sm @(ViewData["FilterStatus"] != null ? "btn-primary" : "btn-outline-secondary") ms-1" onclick="showColumnFilter('status')" title="@(ViewData["FilterStatus"] != null ? "| Filter Status" : "Filter Status")">
+                                        @if (ViewData["FilterStatus"] != null)
+                                        {
+                                            <span class="badge bg-light text-dark me-1" style="font-size: 0.6em;">@ViewData["FilterStatus"].ToString().Split(',').Length</span>
+                                        }
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                 </div>
