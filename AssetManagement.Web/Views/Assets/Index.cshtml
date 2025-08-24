@@ -2,6 +2,55 @@
 
 @{
     ViewData["Title"] = "Assets";
+    
+    // Helper function to generate route values with all filter parameters
+    Dictionary<string, string> GenerateSortRouteValues(string sortOrder)
+    {
+        var routeValues = new Dictionary<string, string>();
+        
+        if (!string.IsNullOrEmpty(sortOrder))
+            routeValues["sortOrder"] = sortOrder;
+            
+        if (ViewData["CurrentFilter"] != null)
+            routeValues["searchTerm"] = ViewData["CurrentFilter"].ToString();
+            
+        routeValues["pageSize"] = Model.PageSize.ToString();
+        
+        if (ViewData["FilterAssetTag"] != null)
+            routeValues["filterAssetTag"] = ViewData["FilterAssetTag"].ToString();
+        if (ViewData["FilterSerialNumber"] != null)
+            routeValues["filterSerialNumber"] = ViewData["FilterSerialNumber"].ToString();
+        if (ViewData["FilterServiceTag"] != null)
+            routeValues["filterServiceTag"] = ViewData["FilterServiceTag"].ToString();
+        if (ViewData["FilterManufacturer"] != null)
+            routeValues["filterManufacturer"] = ViewData["FilterManufacturer"].ToString();
+        if (ViewData["FilterModel"] != null)
+            routeValues["filterModel"] = ViewData["FilterModel"].ToString();
+        if (ViewData["FilterCategory"] != null)
+            routeValues["filterCategory"] = ViewData["FilterCategory"].ToString();
+        if (ViewData["FilterNetName"] != null)
+            routeValues["filterNetName"] = ViewData["FilterNetName"].ToString();
+        if (ViewData["FilterAssignedUser"] != null)
+            routeValues["filterAssignedUser"] = ViewData["FilterAssignedUser"].ToString();
+        if (ViewData["FilterManager"] != null)
+            routeValues["filterManager"] = ViewData["FilterManager"].ToString();
+        if (ViewData["FilterDepartment"] != null)
+            routeValues["filterDepartment"] = ViewData["FilterDepartment"].ToString();
+        if (ViewData["FilterLocation"] != null)
+            routeValues["filterLocation"] = ViewData["FilterLocation"].ToString();
+        if (ViewData["FilterFloor"] != null)
+            routeValues["filterFloor"] = ViewData["FilterFloor"].ToString();
+        if (ViewData["FilterDesk"] != null)
+            routeValues["filterDesk"] = ViewData["FilterDesk"].ToString();
+        if (ViewData["FilterStatus"] != null)
+            routeValues["filterStatus"] = ViewData["FilterStatus"].ToString();
+        if (ViewData["FilterVendor"] != null)
+            routeValues["filterVendor"] = ViewData["FilterVendor"].ToString();
+        if (ViewData["FilterWarrantyEnd"] != null)
+            routeValues["filterWarrantyEnd"] = ViewData["FilterWarrantyEnd"].ToString();
+            
+        return routeValues;
+    }
 }
 
 @Html.AntiForgeryToken()
@@ -428,7 +477,7 @@
                             }
                             <th class="column-assetTag">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["AssetTagSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["AssetTagSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Asset Tag
                                         @if (ViewData["CurrentSort"]?.ToString() == "assetTag_desc")
                                         {
@@ -450,7 +499,7 @@
                             </th>
                             <th class="column-serialNumber">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["SerialNumberSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["SerialNumberSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Serial Number
                                         @if (ViewData["CurrentSort"]?.ToString() == "serialNumber_desc")
                                         {
@@ -472,7 +521,7 @@
                             </th>
                             <th class="column-serviceTag">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["ServiceTagSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ServiceTagSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Service Tag
                                         @if (ViewData["CurrentSort"]?.ToString() == "serviceTag_desc")
                                         {
@@ -494,7 +543,7 @@
                             </th>
                             <th class="column-manufacturer">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["ManufacturerSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ManufacturerSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Manufacturer
                                         @if (ViewData["CurrentSort"]?.ToString() == "manufacturer_desc")
                                         {
@@ -516,7 +565,7 @@
                             </th>
                             <th class="column-model">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["ModelSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ModelSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Model
                                         @if (ViewData["CurrentSort"]?.ToString() == "model_desc")
                                         {
@@ -538,7 +587,7 @@
                             </th>
                             <th class="column-category">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["CategorySortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["CategorySortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Category
                                         @if (ViewData["CurrentSort"]?.ToString() == "category_desc")
                                         {
@@ -560,7 +609,7 @@
                             </th>
                             <th class="column-netName">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["NetNameSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["NetNameSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Net Name
                                         @if (ViewData["CurrentSort"]?.ToString() == "netName_desc")
                                         {
@@ -582,7 +631,7 @@
                             </th>
                             <th class="column-assignedUser">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["AssignedUserSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["AssignedUserSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Assigned User
                                         @if (ViewData["CurrentSort"]?.ToString() == "assignedUser_desc")
                                         {
@@ -603,7 +652,7 @@
                                 </div>
                             </th>
                             <th class="column-assignedUserEmail">
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["AssignedUserEmailSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["AssignedUserEmailSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                     Assigned User Email
                                     @if (ViewData["CurrentSort"]?.ToString() == "assignedUserEmail_desc")
                                     {
@@ -621,7 +670,7 @@
                             </th>
                             <th class="column-manager">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["ManagerSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["ManagerSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Manager
                                         @if (ViewData["CurrentSort"]?.ToString() == "manager_desc")
                                         {
@@ -643,7 +692,7 @@
                             </th>
                             <th class="column-department">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["DepartmentSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["DepartmentSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Department
                                         @if (ViewData["CurrentSort"]?.ToString() == "department_desc")
                                         {
@@ -682,7 +731,7 @@
                             </th>
                             <th class="column-location">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["LocationSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["LocationSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Location
                                         @if (ViewData["CurrentSort"]?.ToString() == "location_desc")
                                         {
@@ -748,7 +797,7 @@
                             </th>
                             <th class="column-status">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <a asp-action="Index" asp-route-sortOrder="@ViewData["StatusSortParm"]" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-pageSize="@Model.PageSize" class="text-decoration-none sortable-header">
+                                    <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["StatusSortParm"]?.ToString())" class="text-decoration-none sortable-header">
                                         Status
                                         @if (ViewData["CurrentSort"]?.ToString() == "status_desc")
                                         {
@@ -1383,7 +1432,7 @@
                             @if (Model.HasPreviousPage)
                             {
                                 <li class="page-item">
-                                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex - 1)" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-sortOrder="@ViewData["CurrentSort"]" asp-route-pageSize="@Model.PageSize">
+                                    <a class="page-link" asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["CurrentSort"]?.ToString())" asp-route-page="@(Model.PageIndex - 1)">
                                         <i class="bi bi-chevron-left"></i> Previous
                                     </a>
                                 </li>
@@ -1405,7 +1454,7 @@
                             @if (startPage > 1)
                             {
                                 <li class="page-item">
-                                    <a class="page-link" asp-action="Index" asp-route-page="1" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-sortOrder="@ViewData["CurrentSort"]" asp-route-pageSize="@Model.PageSize">1</a>
+                                    <a class="page-link" asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["CurrentSort"]?.ToString())" asp-route-page="1">1</a>
                                 </li>
                                 @if (startPage > 2)
                                 {
@@ -1418,7 +1467,7 @@
                             @for (int i = startPage; i <= endPage; i++)
                             {
                                 <li class="page-item @(i == Model.PageIndex ? "active" : "")">
-                                    <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-sortOrder="@ViewData["CurrentSort"]" asp-route-pageSize="@Model.PageSize">@i</a>
+                                    <a class="page-link" asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["CurrentSort"]?.ToString())" asp-route-page="@i">@i</a>
                                 </li>
                             }
 
@@ -1431,14 +1480,14 @@
                                     </li>
                                 }
                                 <li class="page-item">
-                                    <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-sortOrder="@ViewData["CurrentSort"]" asp-route-pageSize="@Model.PageSize">@Model.TotalPages</a>
+                                    <a class="page-link" asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["CurrentSort"]?.ToString())" asp-route-page="@Model.TotalPages">@Model.TotalPages</a>
                                 </li>
                             }
 
                             @if (Model.HasNextPage)
                             {
                                 <li class="page-item">
-                                    <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex + 1)" asp-route-searchTerm="@ViewData["CurrentFilter"]" asp-route-sortOrder="@ViewData["CurrentSort"]" asp-route-pageSize="@Model.PageSize">
+                                    <a class="page-link" asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["CurrentSort"]?.ToString())" asp-route-page="@(Model.PageIndex + 1)">
                                         Next <i class="bi bi-chevron-right"></i>
                                     </a>
                                 </li>
@@ -1521,37 +1570,9 @@
             }
         }
         
-        function toggleSelectAll() {
-        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-        const assetCheckboxes = document.querySelectorAll('.asset-checkbox');
+
         
-        assetCheckboxes.forEach(checkbox => {
-            checkbox.checked = selectAllCheckbox.checked;
-            const assetTag = checkbox.dataset.assetTag;
-            if (selectAllCheckbox.checked) {
-                selectedAssets.add(assetTag);
-            } else {
-                selectedAssets.delete(assetTag);
-            }
-        });
-        
-        updateBulkDeleteButton();
-        updateSelectionBasket();
-    }
-        
-            function updateBulkDeleteButton() {
-        const selectedCheckboxes = document.querySelectorAll('.asset-checkbox:checked');
-        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-        
-        if (selectedCheckboxes.length > 0) {
-            bulkDeleteBtn.style.display = 'inline';
-        } else {
-            bulkDeleteBtn.style.display = 'none';
-        }
-        
-        // Also update the selection basket
-        updateSelectionBasket();
-    }
+
         
         function submitBulkDelete() {
             const selectedCheckboxes = document.querySelectorAll('.asset-checkbox:checked');
@@ -1599,12 +1620,6 @@
             initializeAdminOperations();
         });
         
-        function changePageSize(pageSize) {
-            const url = new URL(window.location);
-            url.searchParams.set('pageSize', pageSize);
-            url.searchParams.set('page', '1'); // Reset to first page when changing page size
-            window.location.href = url.toString();
-        }
     </script>
 }
 
@@ -3188,13 +3203,24 @@
 
         document.getElementById('filterColumnName').textContent = columnNames[columnId] || columnId;
         
+        // Get currently applied filter values from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const filterParamName = `filter${columnId.charAt(0).toUpperCase() + columnId.slice(1)}`;
+        const currentFilterParam = urlParams.get(filterParamName);
+        
+        // Parse current filter values
+        if (currentFilterParam) {
+            currentFilterValues = currentFilterParam.split(',').map(v => v.trim());
+        } else {
+            currentFilterValues = [];
+        }
+        
         // Load filter values from server
         fetch(`/Assets/GetFilterValues?column=${columnId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     allFilterValues = data.values;
-                    currentFilterValues = [];
                     populateAvailableValues();
                     populateSelectedValues();
                     
@@ -3307,5 +3333,70 @@
         url.searchParams.delete(paramName);
         url.searchParams.set('page', '1'); // Reset to first page
         window.location.href = url.toString();
+    }
+
+    // Global functions that need to be accessible from HTML elements
+    function changePageSize(pageSize) {
+        console.log('changePageSize called with:', pageSize);
+        const url = new URL(window.location);
+        
+        // Preserve all current parameters
+        const currentParams = new URLSearchParams(window.location.search);
+        
+        // Set the new page size
+        url.searchParams.set('pageSize', pageSize);
+        url.searchParams.set('page', '1'); // Reset to first page when changing page size
+        
+        // Preserve all filter parameters
+        const filterParams = [
+            'searchTerm', 'sortOrder',
+            'filterAssetTag', 'filterSerialNumber', 'filterServiceTag',
+            'filterManufacturer', 'filterModel', 'filterCategory',
+            'filterNetName', 'filterAssignedUser', 'filterManager',
+            'filterDepartment', 'filterLocation', 'filterFloor',
+            'filterDesk', 'filterStatus', 'filterVendor', 'filterWarrantyEnd'
+        ];
+        
+        filterParams.forEach(param => {
+            const value = currentParams.get(param);
+            if (value) {
+                url.searchParams.set(param, value);
+            }
+        });
+        
+        console.log('Redirecting to:', url.toString());
+        window.location.href = url.toString();
+    }
+
+    function updateBulkDeleteButton() {
+        const selectedCheckboxes = document.querySelectorAll('.asset-checkbox:checked');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        
+        if (selectedCheckboxes.length > 0) {
+            bulkDeleteBtn.style.display = 'inline';
+        } else {
+            bulkDeleteBtn.style.display = 'none';
+        }
+        
+        // Also update the selection basket
+        updateSelectionBasket();
+    }
+
+    function toggleSelectAll() {
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const assetCheckboxes = document.querySelectorAll('.asset-checkbox');
+        
+        assetCheckboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+            const assetTag = checkbox.dataset.assetTag;
+            if (selectAllCheckbox.checked) {
+                selectedAssets.add(assetTag);
+            } else {
+                selectedAssets.delete(assetTag);
+            }
+        });
+        
+        updateBulkDeleteButton();
+        updateSelectionBasket();
     }
 </script>

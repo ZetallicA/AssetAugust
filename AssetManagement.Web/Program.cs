@@ -71,6 +71,8 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
     options.Scope.Add("email");
     options.Scope.Add("User.Read");
     
+    // Redirect URIs are configured in appsettings.Development.json
+    
     // Add event handler to process user after successful authentication
     options.Events = new OpenIdConnectEvents
     {
@@ -107,6 +109,17 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
             logger.LogError(context.Exception, "OpenID Connect authentication failed");
+            return Task.CompletedTask;
+        },
+        
+        OnRedirectToIdentityProvider = context =>
+        {
+            // Force HTTPS redirect URI for Cloudflare
+            var redirectUri = context.ProtocolMessage.RedirectUri;
+            if (redirectUri != null && redirectUri.StartsWith("http://"))
+            {
+                context.ProtocolMessage.RedirectUri = redirectUri.Replace("http://", "https://");
+            }
             return Task.CompletedTask;
         }
     };
@@ -162,7 +175,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Disable HTTPS redirection for Cloudflare tunnel compatibility
+// app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();

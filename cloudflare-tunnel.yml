@@ -1,24 +1,27 @@
 # Cloudflare Tunnel Configuration for Asset Management
-# Save this as cloudflare-tunnel.yml and use with cloudflared
+# This tunnel connects to the local server via HTTP to avoid SSL certificate issues
 
-tunnel: 07b807ec-612a-4885-b614-47b7dc879034
-credentials-file: C:\Users\%USERNAME%\.cloudflared\07b807ec-612a-4885-b614-47b7dc879034.json
+tunnel: 07b807ec-612a-4885
+credentials-file: /etc/cloudflared/07b807ec-612a-4885.json
 
 ingress:
-  # Asset Management Web Application
+  # Asset Management Web Application - HTTP connection
   - hostname: assets.oathone.com
-    service: http://localhost:5147
+    service: http://192.168.8.199:5147
     originRequest:
       noTLSVerify: true
       connectTimeout: 30s
       readTimeout: 30s
       writeTimeout: 30s
+      disableChunkedEncoding: true
   
   # Health check endpoint
-  - hostname: assetmanagement.yourdomain.com
-    service: http://localhost:5147/health
+  - hostname: assets.oathone.com
+    path: /health
+    service: http://192.168.8.199:5147/health
     originRequest:
       noTLSVerify: true
+      disableChunkedEncoding: true
   
   # Catch-all rule (must be last)
   - service: http_status:404

@@ -93,6 +93,24 @@ public class AssetsController : Controller
         ViewData["CreatedAtSortParm"] = sortOrder == "createdAt" ? "createdAt_desc" : "createdAt";
         ViewData["CreatedBySortParm"] = sortOrder == "createdBy" ? "createdBy_desc" : "createdBy";
         ViewData["CurrentFilter"] = searchTerm;
+        
+        // Pass filter parameters to view for sorting links
+        ViewData["FilterAssetTag"] = filterAssetTag;
+        ViewData["FilterSerialNumber"] = filterSerialNumber;
+        ViewData["FilterServiceTag"] = filterServiceTag;
+        ViewData["FilterManufacturer"] = filterManufacturer;
+        ViewData["FilterModel"] = filterModel;
+        ViewData["FilterCategory"] = filterCategory;
+        ViewData["FilterNetName"] = filterNetName;
+        ViewData["FilterAssignedUser"] = filterAssignedUser;
+        ViewData["FilterManager"] = filterManager;
+        ViewData["FilterDepartment"] = filterDepartment;
+        ViewData["FilterLocation"] = filterLocation;
+        ViewData["FilterFloor"] = filterFloor;
+        ViewData["FilterDesk"] = filterDesk;
+        ViewData["FilterStatus"] = filterStatus;
+        ViewData["FilterVendor"] = filterVendor;
+        ViewData["FilterWarrantyEnd"] = filterWarrantyEnd;
 
         var assetsQuery = _context.Assets.AsQueryable();
 
@@ -2695,7 +2713,7 @@ public class AssetsController : Controller
 
     // GET: Assets/GetFilterValues
     [HttpGet]
-    [Authorize(Roles = "Admin,IT")]
+    [Authorize] // Allow any authenticated user to access filter values
     public async Task<IActionResult> GetFilterValues(string column)
     {
         try

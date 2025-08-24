@@ -1,166 +1,195 @@
 # Cloudflare Tunnel Setup for Asset Management
 
-This guide will help you set up Cloudflare Tunnel to securely expose your Asset Management application to the internet.
+## Overview
+This guide explains how to set up Cloudflare Tunnel to connect to your local Asset Management application via HTTP, avoiding SSL certificate issues.
 
-## Prerequisites
+## Configuration Files
 
-1. **Cloudflare Account**: You need a Cloudflare account with a domain
-2. **cloudflared**: Install the Cloudflare Tunnel client
-3. **Asset Management Application**: Running on your local machine
+### 1. Cloudflare Tunnel Config (`cloudflare-tunnel.yml`)
 
-## Step 1: Install cloudflared
-
-### Windows (PowerShell)
-```powershell
-# Download and install cloudflared
-Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "cloudflared.exe"
-```
-
-### Or download from: https://github.com/cloudflare/cloudflared/releases
-
-## Step 2: Authenticate with Cloudflare
-
-```bash
-cloudflared tunnel login
-```
-
-This will:
-- Open your browser to authenticate with Cloudflare
-- Download a credentials file to your machine
-- Note the path to the credentials file
-
-## Step 3: Create a Tunnel
-
-```bash
-cloudflared tunnel create asset-management
-```
-
-This will create a tunnel and give you a tunnel ID. Copy this ID.
-
-## Step 4: Configure the Tunnel
-
-1. **Update the configuration file**:
-   - Open `cloudflare-tunnel.yml`
-   - Replace `your-tunnel-id-here` with your actual tunnel ID
-   - Replace `yourdomain.com` with your actual domain
-   - Update the `credentials-file` path to point to your credentials file
-
-2. **Example configuration**:
 ```yaml
-tunnel: abc12345-6789-def0-1234-567890abcdef
-credentials-file: C:\Users\YourUsername\.cloudflared\abc12345-6789-def0-1234-567890abcdef.json
+# Cloudflare Tunnel Configuration for Asset Management
+# This tunnel connects to the local server via HTTP to avoid SSL certificate issues
+
+tunnel: 07b807ec-612a-4885
+credentials-file: /etc/cloudflared/07b807ec-612a-4885.json
 
 ingress:
-  - hostname: assetmanagement.yourdomain.com
-    service: http://localhost:5147
+  # Asset Management Web Application - HTTP connection
+  - hostname: assets.oathone.com
+    service: http://192.168.8.199:5147
     originRequest:
       noTLSVerify: true
       connectTimeout: 30s
       readTimeout: 30s
       writeTimeout: 30s
+      disableChunkedEncoding: true
   
+  # Health check endpoint
+  - hostname: assets.oathone.com
+    path: /health
+    service: http://192.168.8.199:5147/health
+    originRequest:
+      noTLSVerify: true
+      disableChunkedEncoding: true
+  
+  # Catch-all rule (must be last)
   - service: http_status:404
 ```
 
-## Step 5: Start the Asset Management Application
+### 2. Application Configuration
 
-### Option A: Use the PowerShell Script
+Your application is configured to bind to your specific IP address:
+
+**`appsettings.Development.json`:**
+```json
+{
+  "Kestrel": {
+    "Endpoints": {
+      "Http":  { "Url": "http://192.168.8.199:5148" },
+      "Https": { "Url": "https://192.168.8.199:5147" }
+    }
+  }
+}
+```
+
+**`launchSettings.json`:**
+```json
+{
+  "cloudflare": {
+    "applicationUrl": "https://192.168.8.199:5147;http://192.168.8.199:5148"
+  }
+}
+```
+
+## Setup Steps
+
+### 1. Start Your Application
+
 ```powershell
+# Option 1: Using the script
 .\start-for-cloudflare.ps1
+
+# Option 2: Manual command
+cd AssetManagement.Web
+dotnet run --launch-profile cloudflare
 ```
 
-### Option B: Manual Start
-```bash
-dotnet run --project AssetManagement.Web --launch-profile cloudflare
-```
-
-The application will start and be accessible on:
-- **HTTP**: http://0.0.0.0:5147
-- **For Cloudflare Tunnel**: http://localhost:5147
-
-## Step 6: Start the Cloudflare Tunnel
+### 2. Start Cloudflare Tunnel
 
 ```bash
+# Start the tunnel with your config
 cloudflared tunnel --config cloudflare-tunnel.yml run
+
+# Or if you want to run it as a service
+cloudflared tunnel --config cloudflare-tunnel.yml service install
 ```
 
-## Step 7: Configure DNS
+### 3. Verify Tunnel Status
 
-1. Go to your Cloudflare dashboard
-2. Navigate to your domain's DNS settings
-3. Add a CNAME record:
-   - **Name**: `assetmanagement` (or your preferred subdomain)
-   - **Target**: `{your-tunnel-id}.cfargotunnel.com`
-   - **Proxy status**: Proxied (orange cloud)
+```bash
+# Check tunnel status
+cloudflared tunnel list
 
-## Step 8: Test the Setup
+# Check tunnel info
+cloudflared tunnel info 07b807ec-612a-4885
+```
 
-1. **Local Access**: http://localhost:5147
-2. **Remote Access**: https://assetmanagement.yourdomain.com
+## Key Configuration Points
 
-## Security Considerations
+### Why HTTP Instead of HTTPS?
 
-### For Production Use:
+1. **Self-Signed Certificate Issue**: Your local server uses a self-signed SSL certificate
+2. **Tunnel Security**: Cloudflare Tunnel provides end-to-end encryption regardless
+3. **Simplified Setup**: No need to manage certificates locally
 
-1. **Update Azure AD Configuration**:
-   - Add your domain to the Azure AD app registration
-   - Update redirect URIs to include your domain
+### Important Settings
 
-2. **Environment Variables**:
-   - Set `ASPNETCORE_ENVIRONMENT` to `Production`
-   - Configure proper connection strings
-   - Set up proper logging
+- **`service: http://192.168.8.199:5147`**: Connects via HTTP to your local server
+- **`noTLSVerify: true`**: Disables TLS verification (not needed for HTTP)
+- **`disableChunkedEncoding: true`**: Helps with compatibility
+- **`connectTimeout: 30s`**: Gives enough time for connection
 
-3. **Firewall**:
-   - Ensure port 5147 is not exposed directly to the internet
-   - Only allow Cloudflare Tunnel traffic
+## Access URLs
+
+### Local Development
+- **HTTPS**: `https://192.168.8.199:5147`
+- **HTTP**: `http://192.168.8.199:5148`
+
+### External Access (via Cloudflare Tunnel)
+- **Public URL**: `https://assets.oathone.com`
 
 ## Troubleshooting
 
-### Common Issues:
+### Common Issues
 
-1. **"Connection refused"**:
-   - Ensure the application is running on port 5147
-   - Check if the application is bound to 0.0.0.0
+1. **"Unable to reach the origin service"**
+   - Verify your application is running on `192.168.8.199:5147`
+   - Check firewall settings
+   - Ensure tunnel is running
 
-2. **"Tunnel not found"**:
-   - Verify the tunnel ID in your configuration
-   - Ensure the credentials file path is correct
+2. **Connection Timeout**
+   - Increase `connectTimeout` in the config
+   - Check network connectivity
 
-3. **"Hostname not found"**:
-   - Check your DNS configuration
-   - Ensure the CNAME record is properly set
+3. **Tunnel Not Starting**
+   - Verify credentials file path: `/etc/cloudflared/07b807ec-612a-4885.json`
+   - Check tunnel ID matches your actual tunnel
 
-### Logs:
+### Debugging Commands
 
-- **Application Logs**: Check the console output when starting the app
-- **Tunnel Logs**: Check cloudflared output for connection issues
+```bash
+# Test local connectivity
+curl http://192.168.8.199:5147
 
-## Advanced Configuration
+# Check tunnel logs
+cloudflared tunnel --config cloudflare-tunnel.yml run --loglevel debug
 
-### Custom Domain with SSL:
-The tunnel automatically provides SSL certificates for your domain.
-
-### Multiple Services:
-You can add multiple services to the same tunnel:
-
-```yaml
-ingress:
-  - hostname: assetmanagement.yourdomain.com
-    service: http://localhost:5147
-  - hostname: api.yourdomain.com
-    service: http://localhost:5000
-  - service: http_status:404
+# Verify tunnel is running
+cloudflared tunnel list
 ```
 
-### Load Balancing:
-For high availability, you can run multiple instances and use Cloudflare's load balancing.
+## Security Considerations
 
-## Support
+### Network Security
+- **Tunnel Encryption**: All traffic is encrypted end-to-end
+- **No Public Ports**: No need to expose ports to the internet
+- **Cloudflare Protection**: DDoS protection and SSL termination
 
-If you encounter issues:
-1. Check the application logs
-2. Check the tunnel logs
-3. Verify your configuration
-4. Ensure all prerequisites are met
+### Application Security
+- **Azure AD Authentication**: All authentication handled by Azure AD
+- **HTTPS for Users**: Users always access via HTTPS
+- **Local HTTP**: Only the tunnel-to-application connection uses HTTP
+
+## Azure AD Configuration
+
+### Required Redirect URIs
+In Azure Portal → App registrations → Asset Management → Authentication:
+
+**Redirect URIs:**
+- `https://assets.oathone.com/signin-oidc`
+- `https://assets.oathone.com/signout-callback-oidc`
+- `https://192.168.8.199:5147/signin-oidc` (for local development)
+- `https://192.168.8.199:5147/signout-callback-oidc` (for local development)
+
+**Front-channel logout URLs:**
+- `https://assets.oathone.com/`
+- `https://192.168.8.199:5147/`
+
+## Benefits of This Setup
+
+1. **No SSL Certificate Management**: No need to manage local certificates
+2. **Secure External Access**: All external traffic is encrypted
+3. **Simple Configuration**: Minimal setup required
+4. **Reliable Connection**: HTTP is more reliable than HTTPS with self-signed certs
+5. **Cloudflare Features**: Automatic SSL, DDoS protection, caching
+
+## Development Workflow
+
+1. **Start Application**: `dotnet run --launch-profile cloudflare`
+2. **Start Tunnel**: `cloudflared tunnel --config cloudflare-tunnel.yml run`
+3. **Access**: `https://assets.oathone.com`
+4. **Stop**: Ctrl+C on both processes
+
+This setup provides secure external access to your Asset Management application without the complexity of managing SSL certificates locally.
 
