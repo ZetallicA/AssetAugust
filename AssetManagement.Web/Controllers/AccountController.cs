@@ -1,5 +1,5 @@
 using AssetManagement.Domain.Entities;
-using AssetManagement.Domain.Models;
+using AssetManagement.Web.Models;
 using AssetManagement.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -62,7 +62,31 @@ public class AccountController : Controller
     [Authorize]
     public async Task<IActionResult> Profile()
     {
-        var user = await _userManager.GetUserAsync(User);
+        // Debug: Log all claims
+        _logger.LogInformation("User claims: {Claims}", string.Join(", ", User.Claims.Select(c => $"{c.Type}: {c.Value}")));
+        
+        // Debug: Log user identity
+        _logger.LogInformation("User identity: {Identity}", User.Identity?.Name);
+        _logger.LogInformation("User authenticated: {Authenticated}", User.Identity?.IsAuthenticated);
+        
+        // Try to find user by email from claims first (more reliable with Azure AD)
+        var email = User.FindFirstValue(ClaimTypes.Email);
+        _logger.LogInformation("Email from claims: {Email}", email);
+        
+        ApplicationUser? user = null;
+        if (!string.IsNullOrEmpty(email))
+        {
+            user = await _userManager.FindByEmailAsync(email);
+            _logger.LogInformation("FindByEmailAsync result: {User}", user?.Id ?? "NULL");
+        }
+        
+        // Fallback to GetUserAsync if email lookup fails
+        if (user == null)
+        {
+            user = await _userManager.GetUserAsync(User);
+            _logger.LogInformation("GetUserAsync result: {User}", user?.Id ?? "NULL");
+        }
+        
         if (user == null)
         {
             return NotFound();
@@ -72,11 +96,11 @@ public class AccountController : Controller
         var roles = await _userManager.GetRolesAsync(user);
         
         // Create a view model with user info and roles
-        var profileViewModel = new
+        var profileViewModel = new ProfileViewModel
         {
             User = user,
             Roles = roles,
-            Claims = User.Claims.Select(c => new { Type = c.Type, Value = c.Value }).ToList()
+            Claims = User.Claims.Select(c => new ClaimInfo { Type = c.Type, Value = c.Value }).ToList()
         };
 
         return View(profileViewModel);

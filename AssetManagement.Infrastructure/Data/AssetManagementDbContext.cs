@@ -18,6 +18,18 @@ public class AssetManagementDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AssetTransfer> AssetTransfers { get; set; }
     public DbSet<SalvageBatch> SalvageBatches { get; set; }
     public DbSet<AssetEvent> AssetEvents { get; set; }
+    
+    // RBAC and Audit entities (matching existing schema)
+    public DbSet<Permission> Permissions { get; set; }
+    public DbSet<RolePermission> RolePermissions { get; set; }
+    public DbSet<Group> Groups { get; set; }
+    public DbSet<UserGroup> UserGroups { get; set; }
+    public DbSet<Assignment> Assignments { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; }
+    
+    // New workflow entities
+    public DbSet<Workflow> Workflows { get; set; }
+    public DbSet<WorkflowStep> WorkflowSteps { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -204,6 +216,163 @@ public class AssetManagementDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.LastName).HasMaxLength(100);
             entity.Property(e => e.Department).HasMaxLength(100);
             entity.Property(e => e.Title).HasMaxLength(100);
+        });
+
+        // Permission configuration (matching existing schema)
+        builder.Entity<Permission>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(256);
+            
+            entity.HasIndex(e => e.Code).IsUnique();
+        });
+
+        // RolePermission configuration
+        builder.Entity<RolePermission>(entity =>
+        {
+            entity.HasKey(e => new { e.RoleId, e.PermissionId });
+            entity.Property(e => e.RoleId).IsRequired().HasMaxLength(450);
+            
+            // Relationships
+            entity.HasOne(e => e.Role)
+                .WithMany()
+                .HasForeignKey(e => e.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Permission)
+                .WithMany(e => e.RolePermissions)
+                .HasForeignKey(e => e.PermissionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Group configuration
+        builder.Entity<Group>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(256);
+            
+            entity.HasIndex(e => e.Code).IsUnique();
+        });
+
+        // UserGroup configuration
+        builder.Entity<UserGroup>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.GroupId });
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            
+            // Relationships
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.Group)
+                .WithMany(e => e.UserGroups)
+                .HasForeignKey(e => e.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Assignment configuration
+        builder.Entity<Assignment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SubjectType).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.SubjectId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.ScopeType).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.ScopeId).HasMaxLength(128);
+            
+            entity.HasIndex(e => new { e.SubjectType, e.SubjectId });
+            entity.HasIndex(e => new { e.PermissionId, e.ScopeType, e.ScopeId });
+            
+            // Relationships
+            entity.HasOne(e => e.Permission)
+                .WithMany(e => e.Assignments)
+                .HasForeignKey(e => e.PermissionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // AuditLog configuration (matching existing schema)
+        builder.Entity<AuditLog>(entity =>
+        {
+            entity.ToTable("AuditLog"); // Map to the correct table name
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Action).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.Target).HasMaxLength(512);
+            entity.Property(e => e.DetailsJson).HasMaxLength(-1);
+            
+            // Relationships
+            entity.HasOne(e => e.ActorUser)
+                .WithMany()
+                .HasForeignKey(e => e.ActorUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Workflow configuration
+        builder.Entity<Workflow>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.Type).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.InitiatorId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.AssigneeId).HasMaxLength(450);
+            entity.Property(e => e.ApproverId).HasMaxLength(450);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+            entity.Property(e => e.WorkflowData).HasMaxLength(4000);
+            
+            entity.HasIndex(e => e.Type);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.InitiatorId);
+            entity.HasIndex(e => e.AssigneeId);
+            entity.HasIndex(e => e.ApproverId);
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.Priority);
+            
+            // Relationships
+            entity.HasOne(e => e.Initiator)
+                .WithMany()
+                .HasForeignKey(e => e.InitiatorId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(e => e.Assignee)
+                .WithMany()
+                .HasForeignKey(e => e.AssigneeId)
+                .OnDelete(DeleteBehavior.SetNull);
+                
+            entity.HasOne(e => e.Approver)
+                .WithMany()
+                .HasForeignKey(e => e.ApproverId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // WorkflowStep configuration
+        builder.Entity<WorkflowStep>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.AssignedToId).HasMaxLength(450);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+            
+            entity.HasIndex(e => e.WorkflowId);
+            entity.HasIndex(e => e.Order);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.AssignedToId);
+            
+            // Relationships
+            entity.HasOne(e => e.Workflow)
+                .WithMany(e => e.Steps)
+                .HasForeignKey(e => e.WorkflowId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasOne(e => e.AssignedTo)
+                .WithMany()
+                .HasForeignKey(e => e.AssignedToId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

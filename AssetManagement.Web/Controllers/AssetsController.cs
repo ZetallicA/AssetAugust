@@ -348,7 +348,6 @@ public class AssetsController : Controller
     }
 
     // GET: Assets/Create
-    [Authorize(Roles = "Admin,IT,Procurement")]
     public async Task<IActionResult> Create()
     {
         return View();
@@ -357,7 +356,6 @@ public class AssetsController : Controller
     // POST: Assets/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Admin,IT,Procurement")]
     public async Task<IActionResult> Create([Bind("AssetTag,SerialNumber,ServiceTag,Manufacturer,Model,Category,NetName,AssignedUserName,AssignedUserEmail,Manager,Department,Unit,Location,Floor,Desk,Status,IpAddress,MacAddress,WallPort,SwitchName,SwitchPort,PhoneNumber,Extension,Imei,CardNumber,OsVersion,License1,License2,License3,License4,License5,PurchasePrice,OrderNumber,Vendor,VendorInvoice,PurchaseDate,WarrantyStart,WarrantyEndDate,Notes,BuildingId,FloorId,AssignedUserId")] Asset asset)
     {
         // Role-based validation
@@ -439,7 +437,6 @@ public class AssetsController : Controller
     }
 
     // GET: Assets/Import
-    [Authorize(Roles = "Admin,IT,Procurement")]
     public IActionResult Import(bool confirmImport = false, string fileName = null)
     {
         if (confirmImport && !string.IsNullOrEmpty(fileName))
@@ -807,7 +804,6 @@ public class AssetsController : Controller
     }
 
     // GET: Assets/Edit/5
-    [Authorize(Roles = "Admin,IT,Procurement")]
     public async Task<IActionResult> Edit(int? id)
     {
         if (id == null)
@@ -827,7 +823,6 @@ public class AssetsController : Controller
     // POST: Assets/Edit/5
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Admin,IT,Procurement")]
     public async Task<IActionResult> Edit(int id, [Bind("Id,AssetTag,SerialNumber,ServiceTag,Manufacturer,Model,Category,NetName,AssignedUserName,AssignedUserEmail,Manager,Department,Unit,Location,Floor,Desk,Status,IpAddress,MacAddress,WallPort,SwitchName,SwitchPort,PhoneNumber,Extension,Imei,CardNumber,OsVersion,License1,License2,License3,License4,License5,PurchasePrice,OrderNumber,Vendor,VendorInvoice,PurchaseDate,WarrantyStart,WarrantyEndDate,Notes,BuildingId,FloorId,AssignedUserId")] Asset asset)
     {
         if (id != asset.Id)
@@ -922,7 +917,6 @@ public class AssetsController : Controller
     }
 
     // GET: Assets/Delete/5
-    [Authorize(Roles = "Admin,IT")]
     public async Task<IActionResult> Delete(int? id)
     {
         if (id == null)
@@ -944,7 +938,6 @@ public class AssetsController : Controller
     // POST: Assets/Delete/5
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Admin,IT")]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
         try
@@ -1589,7 +1582,6 @@ public class AssetsController : Controller
 
     // GET: Assets/ExportAll
     [HttpGet]
-    [Authorize(Roles = "Admin,IT")]
     public async Task<IActionResult> ExportAll()
     {
         try
@@ -1888,7 +1880,6 @@ public class AssetsController : Controller
 
     // GET: Assets/ExportCurrentView
     [HttpGet]
-    [Authorize(Roles = "Admin,IT")]
     public async Task<IActionResult> ExportCurrentView(string searchTerm = "", string sortOrder = "", string columnConfig = "")
     {
         try
@@ -2143,7 +2134,6 @@ public class AssetsController : Controller
 
     // POST: Assets/GetSelectedAssets
     [HttpPost]
-    [Authorize(Roles = "Admin,IT")]
     public async Task<IActionResult> GetSelectedAssets([FromBody] List<string> assetTags)
     {
         try
@@ -2178,7 +2168,6 @@ public class AssetsController : Controller
 
     // GET: Assets/Cart
     [HttpGet]
-    [Authorize(Roles = "Admin,IT")]
     public async Task<IActionResult> Cart(string assetTags)
     {
         try
@@ -2206,7 +2195,6 @@ public class AssetsController : Controller
 
     // POST: Assets/BulkCheckout
     [HttpPost]
-    [Authorize(Roles = "Admin,IT")]
     public async Task<IActionResult> BulkCheckout([FromBody] BulkCheckoutRequest request)
     {
         try

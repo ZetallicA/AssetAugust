@@ -55,7 +55,6 @@ public class DashboardController : Controller
     }
 
     // GET: Dashboard/Reports
-    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Reports()
     {
         // Temporary: Allow access for specific users

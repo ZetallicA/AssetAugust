@@ -328,8 +328,6 @@
     </div>
 </div>
 
-@if (User.IsInRole("Admin"))
-{
     <div class="card shadow mb-3">
         <div class="card-header bg-warning text-dark admin-operations-header" style="cursor: pointer;" onclick="toggleAdminOperations()">
             <div class="d-flex justify-content-between align-items-center">
@@ -351,17 +349,12 @@
                     <i class="bi bi-x-circle"></i> Clear Errors
                 </a>
                 
-                @if (User.IsInRole("Admin"))
-                {
-                    <button type="button" class="btn btn-danger" onclick="confirmDeleteAll()" title="Delete All Assets">
-                        <i class="bi bi-trash"></i> Delete All
-                    </button>
-                }
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteAll()" title="Delete All Assets">
+                    <i class="bi bi-trash"></i> Delete All
+                </button>
             </div>
             
-            @if (User.IsInRole("Admin") || User.IsInRole("IT") || User.IsInRole("Procurement"))
-            {
-                <div class="d-flex gap-2">
+            <div class="d-flex gap-2">
                     <a asp-action="Create" class="btn btn-primary">
                         <i class="bi bi-plus-circle"></i> Add Asset
                     </a>
@@ -375,14 +368,12 @@
                     <i class="bi bi-search"></i> Search API
                 </a>
                 </div>
-            }
             
             <form id="bulkDeleteForm" method="post" asp-action="BulkDelete" style="display: none;">
                 <!-- Hidden form for submission -->
             </form>
         </div>
     </div>
-}
 
 <div class="card shadow">
     <div class="card-header py-3">
@@ -421,12 +412,9 @@
                             <li><a class="dropdown-item" href="#" onclick="exportCurrentView()">
                                 <i class="bi bi-download"></i> Export Current View
                             </a></li>
-                            @if (User.IsInRole("Admin") || User.IsInRole("IT"))
-                            {
-                                <li><a class="dropdown-item" href="#" onclick="exportAllAssets()">
-                                    <i class="bi bi-file-earmark-excel"></i> Export All Assets
-                                </a></li>
-                            }
+                            <li><a class="dropdown-item" href="#" onclick="exportAllAssets()">
+                                <i class="bi bi-file-earmark-excel"></i> Export All Assets
+                            </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="#" onclick="showBulkActions()" id="bulkActionsOption" style="display: none;">
                                 <i class="bi bi-basket"></i> Bulk Actions (<span id="bulkActionsCount">0</span>)
@@ -469,12 +457,9 @@
                 <table class="table table-striped table-hover">
                     <thead>
                         <tr>
-                            @if (User.IsInRole("Admin"))
-                            {
-                                <th>
-                                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" />
-                                </th>
-                            }
+                            <th>
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" />
+                            </th>
                             <th class="column-assetTag">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <a asp-action="Index" asp-all-route-data="@GenerateSortRouteValues(ViewData["AssetTagSortParm"]?.ToString())" class="text-decoration-none sortable-header @(ViewData["FilterAssetTag"] != null ? "text-primary fw-bold" : "")">
@@ -1312,12 +1297,9 @@
                         @foreach (var asset in Model.Items)
                         {
                             <tr data-asset-id="@asset.Id">
-                                @if (User.IsInRole("Admin"))
-                                {
-                                    <td>
-                                        <input type="checkbox" name="selectedIds" class="asset-checkbox" value="@asset.Id" data-asset-tag="@asset.AssetTag" onchange="updateBulkDeleteButton(); toggleAssetSelection('@asset.AssetTag')" />
-                                    </td>
-                                }
+                                <td>
+                                    <input type="checkbox" name="selectedIds" class="asset-checkbox" value="@asset.Id" data-asset-tag="@asset.AssetTag" onchange="updateBulkDeleteButton(); toggleAssetSelection('@asset.AssetTag')" />
+                                </td>
                                                                  <td class="column-assetTag editable-cell" data-field="AssetTag" data-id="@asset.Id" title="@asset.AssetTag"><strong>@asset.AssetTag</strong></td>
                                  <td class="column-serialNumber editable-cell" data-field="SerialNumber" data-id="@asset.Id" title="@asset.SerialNumber">@asset.SerialNumber</td>
                                  <td class="column-serviceTag editable-cell" data-field="ServiceTag" data-id="@asset.Id" title="@asset.ServiceTag">@asset.ServiceTag</td>
@@ -1406,22 +1388,14 @@
                                         <a asp-action="Details" asp-route-id="@asset.Id" class="btn btn-outline-primary" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        @if (User.IsInRole("Admin"))
-                                        {
-                                            <a asp-action="Edit" asp-route-id="@asset.Id" class="btn btn-outline-secondary" title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                        }
-                                        @if (User.IsInRole("Admin") || User.IsInRole("IT"))
-                                        {
-                                            <a asp-action="Delete" asp-route-id="@asset.Id" class="btn btn-outline-danger" title="Delete">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
-                                        }
+                                        <a asp-action="Edit" asp-route-id="@asset.Id" class="btn btn-outline-secondary" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@asset.Id" class="btn btn-outline-danger" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
                                         
                                         <!-- Lifecycle Actions Dropdown -->
-                                        @if (User.IsInRole("SiteTech") || User.IsInRole("JohnStOps") || User.IsInRole("Admin"))
-                                        {
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Lifecycle Actions">
                                                     <i class="bi bi-arrow-repeat"></i>
@@ -1451,11 +1425,8 @@
                                                     <li><a class="dropdown-item" href="#" onclick="showLifecycleHistory('@asset.AssetTag')"><i class="bi bi-clock-history"></i> History</a></li>
                                                 </ul>
                                             </div>
-                                        }
                                         
                                         <!-- Facilities Driver Actions -->
-                                        @if (User.IsInRole("FacilitiesDriver") || User.IsInRole("Admin"))
-                                        {
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <button type="button" class="btn btn-outline-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Facilities Driver Actions">
                                                     <i class="bi bi-truck"></i>
@@ -1467,7 +1438,6 @@
                                                     <li><a class="dropdown-item" href="#" onclick="reassignLocationAfterDelivery('@asset.AssetTag')"><i class="bi bi-geo-alt"></i> Reassign Location</a></li>
                                                 </ul>
                                             </div>
-                                        }
                                     </div>
                                 </td>
                             </tr>
@@ -1591,8 +1561,6 @@
     </div>
 </div>
 
-@if (User.IsInRole("Admin"))
-{
     <script>
         function toggleAdminOperations() {
             const body = document.getElementById('adminOperationsBody');
@@ -1677,7 +1645,6 @@
         });
         
     </script>
-}
 
 <!-- Cart Preview Modal -->
 <div class="modal fade" id="cartPreviewModal" tabindex="-1" aria-labelledby="cartPreviewModalLabel" aria-hidden="true">

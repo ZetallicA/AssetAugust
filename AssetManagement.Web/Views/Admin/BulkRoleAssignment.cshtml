@@ -1,0 +1,190 @@
+@model AssetManagement.Web.Controllers.BulkRoleAssignmentViewModel
+@{
+    ViewData["Title"] = "Bulk Role Assignment";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-person-plus text-primary me-2"></i>
+                        Bulk Role Assignment
+                    </h1>
+                    <p class="text-muted">Assign roles to multiple users at once</p>
+                </div>
+                <div>
+                    <a href="@Url.Action("UserManagement", "Admin")" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Back to User Management
+                    </a>
+                </div>
+            </div>
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle me-2"></i>
+                    @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <!-- Bulk Assignment Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people me-2"></i>Bulk Role Assignment
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="BulkRoleAssignment" method="post">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Select Role</label>
+                                    <select asp-for="SelectedRole" class="form-select" required>
+                                        <option value="">Choose a role...</option>
+                                        @foreach (var role in Model.AvailableRoles)
+                                        {
+                                            <option value="@role">@role</option>
+                                        }
+                                    </select>
+                                    <span asp-validation-for="SelectedRole" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Action</label>
+                                    <select asp-for="Action" class="form-select" required>
+                                        <option value="Add">Add Role</option>
+                                        <option value="Remove">Remove Role</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="bi bi-save me-2"></i>Apply to Selected Users
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <div class="row">
+                            <div class="col-12">
+                                <h6 class="mb-3">Select Users</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="selectAll">
+                                                        <label class="form-check-label" for="selectAll">
+                                                            Select All
+                                                        </label>
+                                                    </div>
+                                                </th>
+                                                <th>User</th>
+                                                <th>Email</th>
+                                                <th>Department</th>
+                                                <th>Current Roles</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for (int i = 0; i < Model.Users.Count; i++)
+                                            {
+                                                var user = Model.Users[i];
+                                                <tr>
+                                                    <td>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input user-checkbox" type="checkbox" 
+                                                                   name="SelectedUserIds" value="@user.Id" 
+                                                                   id="user_@user.Id">
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                                @(user.FirstName?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                                                            </div>
+                                                            <div>
+                                                                <div class="fw-bold">@user.FirstName @user.LastName</div>
+                                                                <small class="text-muted">@user.Title</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>@user.Email</td>
+                                                    <td>@(user.Department ?? "Not specified")</td>
+                                                    <td>
+                                                        @{
+                                                            // This would need to be populated from the controller
+                                                            var userRoles = new List<string>(); // Placeholder
+                                                        }
+                                                        @if (userRoles.Any())
+                                                        {
+                                                            foreach (var role in userRoles)
+                                                            {
+                                                                <span class="badge bg-primary me-1">@role</span>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">No roles</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+
+    selectAllCheckbox.addEventListener('change', function() {
+        userCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+    });
+
+    userCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const allChecked = Array.from(userCheckboxes).every(cb => cb.checked);
+            const anyChecked = Array.from(userCheckboxes).some(cb => cb.checked);
+            
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = anyChecked && !allChecked;
+        });
+    });
+});
+</script>
+
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+</style>

@@ -1,0 +1,152 @@
+@model AssetManagement.Web.Controllers.AssignRolesViewModel
+@{
+    ViewData["Title"] = "Assign Roles";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-person-badge text-primary me-2"></i>
+                        Assign Roles
+                    </h1>
+                    <p class="text-muted">Assign roles to @Model.User.FirstName @Model.User.LastName</p>
+                </div>
+                <div>
+                    <a href="@Url.Action("UserManagement", "Admin")" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Back to User Management
+                    </a>
+                </div>
+            </div>
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle me-2"></i>
+                    @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <!-- User Info Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person me-2"></i>User Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                    @(Model.User.FirstName?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">@Model.User.FirstName @Model.User.LastName</h5>
+                                    <p class="text-muted mb-0">@Model.User.Email</p>
+                                    <small class="text-muted">@Model.User.Title</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label text-muted">Department</label>
+                                    <p class="mb-0">@(Model.User.Department ?? "Not specified")</p>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label text-muted">Status</label>
+                                    <p class="mb-0">
+                                        @if (Model.User.IsActive)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Inactive</span>
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role Assignment Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-shield-check me-2"></i>Role Assignment
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="AssignRoles" method="post">
+                        <input type="hidden" name="userId" value="@Model.User.Id" />
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Available Roles</h6>
+                                @foreach (var role in Model.AvailableRoles)
+                                {
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="selectedRoles" value="@role" 
+                                               id="role_@role"
+                                               @(Model.CurrentRoles.Contains(role) ? "checked" : "") />
+                                        <label class="form-check-label" for="role_@role">
+                                            @role
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Current Roles</h6>
+                                @if (Model.CurrentRoles.Any())
+                                {
+                                    foreach (var role in Model.CurrentRoles)
+                                    {
+                                        <span class="badge bg-primary me-2 mb-2">@role</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="text-muted">No roles assigned</p>
+                                }
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <div class="d-flex justify-content-end">
+                            <a href="@Url.Action("UserManagement", "Admin")" class="btn btn-outline-secondary me-2">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-lg {
+    width: 64px;
+    height: 64px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+</style>

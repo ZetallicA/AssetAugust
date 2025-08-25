@@ -1,0 +1,289 @@
+@model AssetManagement.Web.Models.MyWorkViewModel
+@{
+    ViewData["Title"] = "My Work";
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-tasks text-primary me-2"></i>
+                My Work Dashboard
+            </h1>
+            <p class="text-muted">Welcome back, @Model.User.FirstName! Here's what needs your attention.</p>
+        </div>
+        <div class="text-end">
+            <small class="text-muted">Roles: @string.Join(", ", Model.Roles)</small>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Pending Approvals -->
+        @if (Model.PendingApprovals.Any())
+        {
+            <div class="col-lg-6 mb-4">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-clock me-2"></i>
+                            Pending Approvals (@Model.PendingApprovals.Count)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            @foreach (var request in Model.PendingApprovals)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">@request.Title</h6>
+                                            <p class="mb-1 text-muted">
+                                                <small>
+                                                    <i class="fas fa-user me-1"></i>@request.Requester?.FirstName @request.Requester?.LastName
+                                                </small>
+                                            </p>
+                                            <p class="mb-1 text-muted">
+                                                <small>
+                                                    <i class="fas fa-calendar me-1"></i>@request.RequestDate.ToString("MMM dd, yyyy")
+                                                    <span class="badge bg-@(request.Priority?.ToLower() switch { "high" => "danger", "medium" => "warning", _ => "secondary" }) ms-2">
+                                                        @request.Priority
+                                                    </span>
+                                                </small>
+                                            </p>
+                                        </div>
+                                        <div class="btn-group btn-group-sm">
+                                            <form asp-action="ApproveRequest" method="post" class="d-inline">
+                                                <input type="hidden" name="requestId" value="@request.Id" />
+                                                <button type="submit" class="btn btn-success btn-sm">
+                                                    <i class="fas fa-check"></i> Approve
+                                                </button>
+                                            </form>
+                                            <form asp-action="RejectRequest" method="post" class="d-inline">
+                                                <input type="hidden" name="requestId" value="@request.Id" />
+                                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to reject this request?')">
+                                                    <i class="fas fa-times"></i> Reject
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- My Requests -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-alt me-2"></i>
+                        My Recent Requests (@Model.MyRequests.Count)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.MyRequests.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var request in Model.MyRequests)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">@request.Title</h6>
+                                            <p class="mb-1 text-muted">
+                                                <small>
+                                                    <i class="fas fa-tag me-1"></i>@request.RequestType
+                                                </small>
+                                            </p>
+                                            <p class="mb-1">
+                                                <span class="badge bg-@(request.Status?.ToLower() switch { 
+                                                    "approved" => "success", 
+                                                    "rejected" => "danger", 
+                                                    "pending" => "warning", 
+                                                    _ => "secondary" 
+                                                })">
+                                                    @request.Status
+                                                </span>
+                                                <small class="text-muted ms-2">
+                                                    <i class="fas fa-calendar me-1"></i>@request.RequestDate.ToString("MMM dd, yyyy")
+                                                </small>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-3">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                            No requests found
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Activity -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Recent Activity
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.RecentActivity.Any())
+                    {
+                        <div class="timeline">
+                            @foreach (var activity in Model.RecentActivity)
+                            {
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-primary"></div>
+                                    <div class="timeline-content">
+                                        <h6 class="mb-1">@activity.Action @(activity.Target?.Split(':')[0] ?? "Unknown")</h6>
+                                        <p class="mb-1 text-muted">@(activity.Target?.Split(':').Length > 1 ? activity.Target?.Split(':')[1] : activity.Target)</p>
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>@activity.WhenUtc.ToString("MMM dd, yyyy HH:mm")
+                                        </small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-3">
+                            <i class="fas fa-history fa-2x mb-2"></i><br>
+                            No recent activity
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflows -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-project-diagram me-2"></i>
+                        Active Workflows
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.Workflows.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var workflow in Model.Workflows)
+                            {
+                                <div class="list-group-item">
+                                    <h6 class="mb-1">@workflow.Name</h6>
+                                    <p class="mb-1 text-muted">
+                                        <small>
+                                            <i class="fas fa-user me-1"></i>@workflow.Initiator?.FirstName @workflow.Initiator?.LastName
+                                        </small>
+                                    </p>
+                                    <p class="mb-1">
+                                        <span class="badge bg-@(workflow.Status?.ToLower() switch { 
+                                            "completed" => "success", 
+                                            "rejected" => "danger", 
+                                            "pending" => "warning", 
+                                            _ => "secondary" 
+                                        })">
+                                            @workflow.Status
+                                        </span>
+                                        <small class="text-muted ms-2">
+                                            <i class="fas fa-calendar me-1"></i>@workflow.CreatedAt.ToString("MMM dd")
+                                        </small>
+                                    </p>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-3">
+                            <i class="fas fa-project-diagram fa-2x mb-2"></i><br>
+                            No active workflows
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permissions Summary -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-key me-2"></i>
+                        Your Permissions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var permission in Model.Permissions.GroupBy(p => p.Split('.')[0]))
+                        {
+                            <div class="col-md-3 mb-3">
+                                <h6 class="text-capitalize">@permission.Key</h6>
+                                <ul class="list-unstyled">
+                                    @foreach (var perm in permission)
+                                    {
+                                        <li><small class="text-muted">• @perm.Split('.')[1]</small></li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -35px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    padding-left: 15px;
+    border-left: 2px solid #e9ecef;
+    padding-bottom: 10px;
+}
+</style>

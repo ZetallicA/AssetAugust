@@ -17,7 +17,7 @@ namespace AssetManagement.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.8")
+                .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -392,7 +392,7 @@ namespace AssetManagement.Infrastructure.Migrations
 
                     b.HasIndex("ServiceTag");
 
-                    b.ToTable("Assets");
+                    b.ToTable("Assets", (string)null);
                 });
 
             modelBuilder.Entity("AssetManagement.Domain.Entities.AssetEvent", b =>
@@ -433,7 +433,7 @@ namespace AssetManagement.Infrastructure.Migrations
 
                     b.HasIndex("AssetTag", "CreatedAt");
 
-                    b.ToTable("AssetEvents");
+                    b.ToTable("AssetEvents", (string)null);
                 });
 
             modelBuilder.Entity("AssetManagement.Domain.Entities.AssetHistory", b =>
@@ -484,7 +484,7 @@ namespace AssetManagement.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AssetHistory");
+                    b.ToTable("AssetHistory", (string)null);
                 });
 
             modelBuilder.Entity("AssetManagement.Domain.Entities.AssetRequest", b =>
@@ -580,7 +580,7 @@ namespace AssetManagement.Infrastructure.Migrations
 
                     b.HasIndex("RequesterId");
 
-                    b.ToTable("AssetRequests");
+                    b.ToTable("AssetRequests", (string)null);
                 });
 
             modelBuilder.Entity("AssetManagement.Domain.Entities.AssetTransfer", b =>
@@ -655,7 +655,7 @@ namespace AssetManagement.Infrastructure.Migrations
 
                     b.HasIndex("AssetTag", "CreatedAt");
 
-                    b.ToTable("AssetTransfers");
+                    b.ToTable("AssetTransfers", (string)null);
                 });
 
             modelBuilder.Entity("AssetManagement.Domain.Entities.Building", b =>
@@ -712,7 +712,7 @@ namespace AssetManagement.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[BuildingCode] IS NOT NULL");
 
-                    b.ToTable("Buildings");
+                    b.ToTable("Buildings", (string)null);
                 });
 
             modelBuilder.Entity("AssetManagement.Domain.Entities.Floor", b =>
@@ -758,7 +758,7 @@ namespace AssetManagement.Infrastructure.Migrations
 
                     b.HasIndex("BuildingId");
 
-                    b.ToTable("Floors");
+                    b.ToTable("Floors", (string)null);
                 });
 
             modelBuilder.Entity("AssetManagement.Domain.Entities.SalvageBatch", b =>
@@ -801,7 +801,7 @@ namespace AssetManagement.Infrastructure.Migrations
 
                     b.HasIndex("PickupVendor");
 
-                    b.ToTable("SalvageBatches");
+                    b.ToTable("SalvageBatches", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

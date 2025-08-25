@@ -1,4 +1,5 @@
 using AssetManagement.Domain.Entities;
+using AssetManagement.Domain.Constants;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -28,8 +29,8 @@ public class DatabaseSeeder
     {
         try
         {
-            // Seed roles
-            await SeedRolesAsync();
+                    // Seed legacy roles (keep for backward compatibility)
+        await SeedRolesAsync();
 
             // Seed admin user
             await SeedAdminUserAsync();
@@ -297,4 +298,5 @@ public class DatabaseSeeder
             _logger.LogError(ex, "Error adding 9th floor to 66 John Street building");
         }
     }
+
 }

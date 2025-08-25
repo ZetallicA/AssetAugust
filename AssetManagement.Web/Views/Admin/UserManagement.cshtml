@@ -1,0 +1,302 @@
+@model List<AssetManagement.Web.Controllers.UserManagementViewModel>
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="container-fluid">
+    @Html.AntiForgeryToken()
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-people-fill text-primary me-2"></i>
+                User Management
+            </h1>
+            <p class="text-muted">Manage user roles, permissions, and access across the Asset Management system.</p>
+        </div>
+        <div>
+            <a href="@Url.Action("SearchUsers", "Admin")" class="btn btn-outline-primary me-2">
+                <i class="bi bi-search me-2"></i>Search & Import Users
+            </a>
+            <a href="@Url.Action("AddUser", "Admin")" class="btn btn-outline-success me-2">
+                <i class="bi bi-person-plus me-2"></i>Add User Manually
+            </a>
+            <a href="@Url.Action("BulkRoleAssignment", "Admin")" class="btn btn-primary">
+                <i class="bi bi-people me-2"></i>Bulk Role Assignment
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- User List -->
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list me-2"></i>Users (@Model.Count)
+                    </h5>
+                </div>
+                <div class="col-auto">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="userSearch" placeholder="Search users...">
+                        <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="userTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Department</th>
+                            <th>Roles</th>
+                            <th>Permissions</th>
+                            <th>Groups</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var userVM in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                            @(userVM.User.FirstName?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">@userVM.User.FirstName @userVM.User.LastName</div>
+                                            <small class="text-muted">@userVM.User.Title</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-break">@userVM.User.Email</div>
+                                    <small class="text-muted">@userVM.User.UserName</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="department-text">@(userVM.User.Department ?? "Not specified")</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" 
+                                                onclick="editDepartment('@userVM.User.Id', '@(userVM.User.Department ?? "")')">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (userVM.Roles.Any())
+                                    {
+                                        foreach (var role in userVM.Roles)
+                                        {
+                                            <span class="badge bg-primary me-1">@role</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No roles</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (userVM.Permissions.Any())
+                                    {
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach (var permission in userVM.Permissions.Take(3))
+                                            {
+                                                <span class="badge bg-info">@permission.Split('.')[1]</span>
+                                            }
+                                            @if (userVM.Permissions.Count > 3)
+                                            {
+                                                <span class="badge bg-secondary">+@(userVM.Permissions.Count - 3) more</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No permissions</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (userVM.Groups.Any())
+                                    {
+                                        foreach (var group in userVM.Groups)
+                                        {
+                                            <span class="badge bg-success me-1">@group</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No groups</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (userVM.User.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactive</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" style="position: relative;">
+                                        <a href="@Url.Action("AssignRoles", "Admin", new { userId = userVM.User.Id })" 
+                                           class="btn btn-outline-primary" title="Assign Roles">
+                                            <i class="bi bi-person-badge"></i>
+                                        </a>
+                                        <a href="@Url.Action("AssignPermissions", "Admin", new { userId = userVM.User.Id })" 
+                                           class="btn btn-outline-info" title="Assign Permissions">
+                                            <i class="bi bi-shield-lock"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end" style="z-index: 1060;">
+                                            <li>
+                                                <a class="dropdown-item" href="@Url.Action("AssignRoles", "Admin", new { userId = userVM.User.Id })">
+                                                    <i class="bi bi-person-badge me-2"></i>Assign Roles
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="@Url.Action("AssignPermissions", "Admin", new { userId = userVM.User.Id })">
+                                                    <i class="bi bi-shield-lock me-2"></i>Assign Permissions
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item" href="@Url.Action("Profile", "Account", new { id = userVM.User.Id })">
+                                                    <i class="bi bi-eye me-2"></i>View Profile
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="@Url.Action("EditProfile", "Account", new { id = userVM.User.Id })">
+                                                    <i class="bi bi-pencil me-2"></i>Edit Profile
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item text-danger" href="#" onclick="resetUserPassword('@userVM.User.Id')">
+                                                    <i class="bi bi-key me-2"></i>Reset Password
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const userSearch = document.getElementById('userSearch');
+    const userTable = document.getElementById('userTable');
+    const clearSearch = document.getElementById('clearSearch');
+
+    userSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const rows = userTable.querySelectorAll('tbody tr');
+
+        rows.forEach(row => {
+            const userName = row.cells[0].textContent.toLowerCase();
+            const userEmail = row.cells[1].textContent.toLowerCase();
+            const department = row.cells[2].textContent.toLowerCase();
+
+            if (userName.includes(searchTerm) || userEmail.includes(searchTerm) || department.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    clearSearch.addEventListener('click', function() {
+        userSearch.value = '';
+        userSearch.dispatchEvent(new Event('input'));
+    });
+});
+
+function resetUserPassword(userId) {
+    if (confirm('Are you sure you want to reset this user\'s password? They will need to set a new password on their next login.')) {
+        // TODO: Implement password reset functionality
+        alert('Password reset functionality will be implemented here.');
+    }
+}
+
+function editDepartment(userId, currentDepartment) {
+    const newDepartment = prompt('Enter new department:', currentDepartment);
+    if (newDepartment !== null && newDepartment !== currentDepartment) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '@Url.Action("UpdateDepartment", "Admin")';
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '__RequestVerificationToken';
+        csrfToken.value = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        
+        const userIdInput = document.createElement('input');
+        userIdInput.type = 'hidden';
+        userIdInput.name = 'userId';
+        userIdInput.value = userId;
+        
+        const departmentInput = document.createElement('input');
+        departmentInput.type = 'hidden';
+        departmentInput.name = 'department';
+        departmentInput.value = newDepartment;
+        
+        form.appendChild(csrfToken);
+        form.appendChild(userIdInput);
+        form.appendChild(departmentInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+</style>

@@ -1,0 +1,316 @@
+@model AssetManagement.Web.Controllers.SearchUsersViewModel
+@{
+    ViewData["Title"] = "Search Users";
+    var searchResults = ViewBag.SearchResults as List<AssetManagement.Web.Controllers.AzureAdUserViewModel> ?? new List<AssetManagement.Web.Controllers.AzureAdUserViewModel>();
+    var searchTerm = ViewBag.SearchTerm as string ?? "";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-search text-primary me-2"></i>
+                        Search Users
+                    </h1>
+                    <p class="text-muted">Search for users in Azure AD or existing local users</p>
+                </div>
+                <div>
+                    <a href="@Url.Action("UserManagement", "Admin")" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left me-2"></i>Back to User Management
+                    </a>
+                    <a href="@Url.Action("AddUser", "Admin")" class="btn btn-primary">
+                        <i class="bi bi-person-plus me-2"></i>Add User Manually
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-search me-2"></i>Search Users
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="SearchUsers" method="post">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label asp-for="SearchTerm" class="form-label">Search Term</label>
+                                    <input asp-for="SearchTerm" class="form-control" placeholder="Search by name, email, or department..." value="@searchTerm" />
+                                                                         <div class="form-text">Search for users by: <strong>name</strong>, <strong>email</strong>, <strong>department</strong>, or <strong>job title</strong></div>
+                                     <div class="form-text small text-muted">Examples: "john", "it@oathone.com", "Facilities", "Manager"</div>
+                                    <span asp-validation-for="SearchTerm" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="bi bi-search me-2"></i>Search
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Search Results -->
+            @if (!string.IsNullOrEmpty(searchTerm))
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-people me-2"></i>Search Results
+                            @if (searchResults.Any())
+                            {
+                                <span class="badge bg-primary ms-2">@searchResults.Count found</span>
+                            }
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (searchResults.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Email</th>
+                                            <th>Department</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var user in searchResults)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                            @(user.FirstName?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                                                        </div>
+                                                        <div>
+                                                            <div class="fw-bold">@user.FirstName @user.LastName</div>
+                                                            <small class="text-muted">@user.Title</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>@user.Email</td>
+                                                <td>@(user.Department ?? "Not specified")</td>
+                                                <td>
+                                                    @if (user.IsExistingUser)
+                                                    {
+                                                        <span class="badge bg-success">Already in system</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-warning">Not in system</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (user.IsExistingUser)
+                                                    {
+                                                        <a href="@Url.Action("AssignRoles", "Admin", new { userId = user.LocalUserId })" class="btn btn-sm btn-outline-primary">
+                                                            <i class="bi bi-person-badge me-1"></i>Manage Roles
+                                                        </a>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button type="button" class="btn btn-sm btn-success" onclick="importUser('@user.Email', '@user.FirstName', '@user.LastName', '@(user.Department ?? "")')">
+                                                            <i class="bi bi-download me-1"></i>Import User
+                                                        </button>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="bi bi-search display-4 text-muted"></i>
+                                <h5 class="mt-3">No users found</h5>
+                                <p class="text-muted">No users found matching "@searchTerm"</p>
+                                
+                                @if (ViewBag.SuggestedEmail != null)
+                                {
+                                    <div class="alert alert-info mt-3">
+                                        <h6><i class="bi bi-info-circle me-2"></i>User Not Found in Local System</h6>
+                                        <p class="mb-2">The email <strong>@ViewBag.SuggestedEmail</strong> was not found in the local user database.</p>
+                                        <p class="mb-3">Since this appears to be a valid @(ViewBag.SuggestedEmail.ToString().Split('@')[1]) email, you can:</p>
+                                        <div class="d-flex justify-content-center gap-2">
+                                            <a href="@Url.Action("AddUser", "Admin", new { email = ViewBag.SuggestedEmail, firstName = ViewBag.SuggestedFirstName, lastName = ViewBag.SuggestedLastName })" class="btn btn-success">
+                                                <i class="bi bi-person-plus me-2"></i>Add This User
+                                            </a>
+                                            <a href="@Url.Action("AddUser", "Admin")" class="btn btn-outline-primary">
+                                                <i class="bi bi-person-plus me-2"></i>Add User Manually
+                                            </a>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="mt-3">
+                                        <a href="@Url.Action("AddUser", "Admin")" class="btn btn-primary">
+                                            <i class="bi bi-person-plus me-2"></i>Add User Manually
+                                        </a>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Information Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Search & Create Process</h6>
+                            <ul class="mb-0">
+                                <li>Search existing local users in the system</li>
+                                <li>If user not found, create them manually</li>
+                                <li>Users can then log in with Azure AD SSO</li>
+                                <li>Assign roles and permissions after creation</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Security & Access</h6>
+                            <ul class="mb-0">
+                                                                 <li>Only @@oathone.com emails are allowed</li>
+                                <li>No direct Azure AD integration (IT controlled)</li>
+                                <li>Manual creation ensures proper oversight</li>
+                                <li>Use <a href="@Url.Action("BulkRoleAssignment", "Admin")">Bulk Role Assignment</a> for efficiency</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import User Modal -->
+<div class="modal fade" id="importUserModal" tabindex="-1" aria-labelledby="importUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importUserModalLabel">
+                    <i class="bi bi-download me-2"></i>Import User
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="importUserForm">
+                    <div class="mb-3">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" id="importEmail" class="form-control" readonly />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">First Name</label>
+                                <input type="text" id="importFirstName" class="form-control" readonly />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" id="importLastName" class="form-control" readonly />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <input type="text" id="importDepartment" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Default Role</label>
+                        <select id="importDefaultRole" class="form-select">
+                            <option value="">No default role</option>
+                            <option value="User">User</option>
+                            <option value="Admin">Admin</option>
+                            <option value="IT">IT</option>
+                            <option value="Manager">Manager</option>
+                            <option value="Procurement">Procurement</option>
+                            <option value="Facilities">Facilities</option>
+                            <option value="Storage">Storage</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitImportUser()">
+                    <i class="bi bi-download me-2"></i>Import User
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        function importUser(email, firstName, lastName, department) {
+            document.getElementById('importEmail').value = email;
+            document.getElementById('importFirstName').value = firstName;
+            document.getElementById('importLastName').value = lastName;
+            document.getElementById('importDepartment').value = department;
+            
+            const modal = new bootstrap.Modal(document.getElementById('importUserModal'));
+            modal.show();
+        }
+        
+        function submitImportUser() {
+            const email = document.getElementById('importEmail').value;
+            const firstName = document.getElementById('importFirstName').value;
+            const lastName = document.getElementById('importLastName').value;
+            const department = document.getElementById('importDepartment').value;
+            const defaultRole = document.getElementById('importDefaultRole').value;
+            
+            fetch('@Url.Action("ImportUser", "Admin")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                },
+                body: new URLSearchParams({
+                    email: email,
+                    firstName: firstName,
+                    lastName: lastName,
+                    department: department,
+                    defaultRole: defaultRole
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('User imported successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while importing the user.');
+            });
+        }
+    </script>
+}

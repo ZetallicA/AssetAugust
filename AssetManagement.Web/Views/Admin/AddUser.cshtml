@@ -1,0 +1,144 @@
+@model AssetManagement.Web.Controllers.AddUserViewModel
+@{
+    ViewData["Title"] = "Add User";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-person-plus text-primary me-2"></i>
+                        Add User
+                    </h1>
+                    <p class="text-muted">Add a new user to the Asset Management system</p>
+                </div>
+                <div>
+                    <a href="@Url.Action("UserManagement", "Admin")" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Back to User Management
+                    </a>
+                </div>
+            </div>
+
+            <!-- Add User Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person me-2"></i>User Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="AddUser" method="post">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label">Email Address *</label>
+                                    <input asp-for="Email" class="form-control" placeholder="user@company.com" />
+                                    <span asp-validation-for="Email" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="DefaultRole" class="form-label">Default Role</label>
+                                    <select asp-for="DefaultRole" class="form-select">
+                                        <option value="">No default role</option>
+                                        <option value="User">User</option>
+                                        <option value="Admin">Admin</option>
+                                        <option value="IT">IT</option>
+                                        <option value="Manager">Manager</option>
+                                        <option value="Procurement">Procurement</option>
+                                        <option value="Facilities">Facilities</option>
+                                        <option value="Storage">Storage</option>
+                                    </select>
+                                    <span asp-validation-for="DefaultRole" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="FirstName" class="form-label">First Name *</label>
+                                    <input asp-for="FirstName" class="form-control" placeholder="John" />
+                                    <span asp-validation-for="FirstName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="LastName" class="form-label">Last Name *</label>
+                                    <input asp-for="LastName" class="form-control" placeholder="Doe" />
+                                    <span asp-validation-for="LastName" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Department" class="form-label">Department</label>
+                                    <input asp-for="Department" class="form-control" placeholder="IT, Facilities, etc." />
+                                    <span asp-validation-for="Department" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Title" class="form-label">Job Title</label>
+                                    <input asp-for="Title" class="form-control" placeholder="Manager, Specialist, etc." />
+                                    <span asp-validation-for="Title" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <div class="d-flex justify-content-end">
+                            <a href="@Url.Action("UserManagement", "Admin")" class="btn btn-outline-secondary me-2">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-person-plus me-2"></i>Add User
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Information Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Azure AD User Creation</h6>
+                            <ul class="mb-0">
+                                <li>Users created here will be added to the local identity system</li>
+                                <li>They can log in using their Azure AD credentials (SSO)</li>
+                                <li>Only @@oathone.com emails are allowed for security</li>
+                                <li>You can assign roles and permissions after creation</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Process Flow</h6>
+                            <ul class="mb-0">
+                                <li>1. Create user in local system (this form)</li>
+                                <li>2. User logs in with Azure AD credentials</li>
+                                <li>3. Assign appropriate roles and permissions</li>
+                                <li>4. User can access Asset Management features</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

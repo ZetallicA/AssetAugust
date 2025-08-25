@@ -29,3 +29,103 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+/* Fix dropdown z-index issues */
+.dropdown-menu {
+  z-index: 1050 !important;
+}
+
+.btn-group .dropdown-menu {
+  z-index: 1051 !important;
+}
+
+.navbar .dropdown-menu {
+  z-index: 1052 !important;
+}
+
+/* Ensure proper positioning for action buttons */
+.btn-group {
+  position: relative;
+}
+
+/* Improve table responsiveness */
+.table-responsive {
+  overflow-x: auto;
+}
+
+/* Better spacing for user management table */
+#userTable td {
+  vertical-align: middle;
+}
+
+#userTable .btn-group {
+  white-space: nowrap;
+}
+
+/* Fix dropdown positioning and visibility */
+.dropdown-menu-end {
+  right: 0 !important;
+  left: auto !important;
+}
+
+/* Ensure dropdowns are always visible */
+.dropdown-menu.show {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Fix table dropdown positioning */
+.table-responsive {
+  overflow: visible !important;
+}
+
+.table-responsive .dropdown-menu {
+  position: absolute !important;
+  z-index: 1060 !important;
+  min-width: 200px !important;
+}
+
+/* Ensure action buttons have proper positioning */
+.btn-group {
+  position: relative !important;
+}
+
+.btn-group .dropdown-menu {
+  position: absolute !important;
+  top: 100% !important;
+  right: 0 !important;
+  left: auto !important;
+  z-index: 1060 !important;
+  min-width: 200px !important;
+  margin-top: 2px !important;
+}
+
+/* Better table layout for user management */
+.table th {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+}
+
+/* Improve button group spacing */
+.btn-group-sm > .btn {
+  margin-right: 1px;
+}
+
+/* Ensure proper container spacing */
+.container-fluid {
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+/* Better card spacing */
+.card {
+  margin-bottom: 1rem;
+}
+
+/* Fix navbar dropdown alignment */
+.navbar-nav .dropdown-menu {
+  margin-top: 0;
+}

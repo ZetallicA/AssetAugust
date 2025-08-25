@@ -49,7 +49,8 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 .AddEntityFrameworkStores<AssetManagementDbContext>()
 .AddDefaultTokenProviders()
 .AddSignInManager<SignInManager<ApplicationUser>>()
-.AddUserManager<UserManager<ApplicationUser>>();
+.AddUserManager<UserManager<ApplicationUser>>()
+.AddClaimsPrincipalFactory<UserClaimsPrincipalFactory>();
 
 // Authentication with Microsoft.Identity.Web (Authorization Code flow)
 builder.Services
@@ -161,10 +162,13 @@ builder.Services.AddHealthChecks()
 builder.Services.AddScoped<IExcelImportService, ExcelImportService>();
 builder.Services.AddScoped<IAssetSearchService, AssetSearchService>();
 builder.Services.AddScoped<AssetManagement.Infrastructure.Services.IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<AssetManagement.Infrastructure.Services.IAuthorizationService, AssetManagement.Infrastructure.Services.AuthorizationService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<AssetLifecycleService>();
 builder.Services.AddScoped<TransferService>();
 builder.Services.AddScoped<SalvageService>();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
