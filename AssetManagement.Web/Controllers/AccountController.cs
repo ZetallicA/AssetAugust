@@ -47,6 +47,17 @@ public class AccountController : Controller
     }
 
     [AllowAnonymous]
+    [HttpGet("Account/SignOut")]
+    public IActionResult SignOut()
+    {
+        var props = new AuthenticationProperties
+        {
+            RedirectUri = Url.Content("~/Account/SignedOut")
+        };
+        return SignOut(props, OpenIdConnectDefaults.AuthenticationScheme, "Cookies");
+    }
+
+    [AllowAnonymous]
     [HttpGet("Account/SignedOut")]
     public IActionResult SignedOut() => View();
 
