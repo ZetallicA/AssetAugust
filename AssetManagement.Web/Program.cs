@@ -6,8 +6,6 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Identity.Web;
-using Microsoft.Identity.Web.UI;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
@@ -52,79 +50,92 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 .AddUserManager<UserManager<ApplicationUser>>()
 .AddClaimsPrincipalFactory<UserClaimsPrincipalFactory>();
 
-// Authentication with Microsoft.Identity.Web (Authorization Code flow)
+// Authentication with pure OpenID Connect (PKCE without client secrets)
 builder.Services
     .AddAuthentication(options =>
     {
         options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
         options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
     })
-    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
-
-builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
-{
-    options.ResponseType = "code";
-    options.UsePkce = true;
-    options.SaveTokens = true;
-    options.Scope.Clear();
-    options.Scope.Add("openid");
-    options.Scope.Add("profile");
-    options.Scope.Add("email");
-    options.Scope.Add("User.Read");
-    
-    // Redirect URIs are configured in appsettings.Development.json
-    
-    // Add event handler to process user after successful authentication
-    options.Events = new OpenIdConnectEvents
+    .AddCookie()
+    .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
     {
-        OnTokenValidated = async context =>
+        // Basic Azure AD configuration
+        options.Authority = $"{builder.Configuration["AzureAd:Instance"]}{builder.Configuration["AzureAd:TenantId"]}/v2.0";
+        options.ClientId = builder.Configuration["AzureAd:ClientId"];
+        
+        // Essential PKCE configuration for public client
+        options.ResponseType = "code";
+        options.UsePkce = true;
+        options.SaveTokens = false; // Don't save tokens since we're not calling APIs
+        
+        // Only request OIDC scopes - no API access
+        options.Scope.Clear();
+        options.Scope.Add("openid");
+        options.Scope.Add("profile");
+        options.Scope.Add("email");
+        
+        // Essential: Do not use client secret for public client
+        options.ClientSecret = null;
+        
+        // Callback paths
+        options.CallbackPath = "/signin-oidc";
+        options.SignedOutCallbackPath = "/signout-callback-oidc";
+        
+        // Token validation
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            try
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ClockSkew = TimeSpan.FromMinutes(5)
+        };
+        
+        // Events to ensure pure public client
+        options.Events = new OpenIdConnectEvents
+        {
+            OnRedirectToIdentityProvider = context =>
             {
-                var authService = context.HttpContext.RequestServices.GetRequiredService<AssetManagement.Infrastructure.Services.IAuthenticationService>();
-                var ipAddress = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-                var userAgent = context.HttpContext.Request.Headers["User-Agent"].ToString();
-                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                
-                var result = await authService.ProcessAzureAdUserAsync(context.Principal!, ipAddress, userAgent);
-                
-                if (!result.IsSuccess)
+                // Explicitly remove client_secret parameter to force PKCE
+                context.ProtocolMessage.Parameters.Remove("client_secret");
+                return Task.CompletedTask;
+            },
+            
+            OnTokenValidated = async context =>
+            {
+                try
                 {
-                    logger.LogWarning("Authentication processing failed: {Error}", result.ErrorMessage);
-                    // Don't fail the authentication, just log the warning
-                    return;
+                    var authService = context.HttpContext.RequestServices.GetRequiredService<AssetManagement.Infrastructure.Services.IAuthenticationService>();
+                    var ipAddress = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+                    var userAgent = context.HttpContext.Request.Headers["User-Agent"].ToString();
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                    
+                    var result = await authService.ProcessAzureAdUserAsync(context.Principal!, ipAddress, userAgent);
+                    
+                    if (!result.IsSuccess)
+                    {
+                        logger.LogWarning("Authentication processing failed: {Error}", result.ErrorMessage);
+                        return;
+                    }
+                    
+                    logger.LogInformation("Successfully processed Azure AD user: {Email}", result.User?.Email);
                 }
-                
-                // Log successful processing
-                logger.LogInformation("Successfully processed Azure AD user: {Email}", result.User?.Email);
-            }
-            catch (Exception ex)
+                catch (Exception ex)
+                {
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "Error in OnTokenValidated event");
+                }
+            },
+            
+            OnAuthenticationFailed = context =>
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "Error in OnTokenValidated event");
-                // Don't fail the authentication, just log the error
+                logger.LogError(context.Exception, "OpenID Connect authentication failed");
+                return Task.CompletedTask;
             }
-        },
-        
-        OnAuthenticationFailed = context =>
-        {
-            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogError(context.Exception, "OpenID Connect authentication failed");
-            return Task.CompletedTask;
-        },
-        
-        OnRedirectToIdentityProvider = context =>
-        {
-            // Force HTTPS redirect URI for Cloudflare
-            var redirectUri = context.ProtocolMessage.RedirectUri;
-            if (redirectUri != null && redirectUri.StartsWith("http://"))
-            {
-                context.ProtocolMessage.RedirectUri = redirectUri.Replace("http://", "https://");
-            }
-            return Task.CompletedTask;
-        }
-    };
-});
+        };
+    });
 
 builder.Services.AddAuthorization(options =>
 {
@@ -142,7 +153,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser());
 });
 
-builder.Services.AddRazorPages().AddMicrosoftIdentityUI();
+builder.Services.AddRazorPages();
 
 // Optional: tune the app cookie (works with MIW's cookie handler)
 builder.Services.ConfigureApplicationCookie(options =>
@@ -150,7 +161,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/Account/SignIn";
     options.LogoutPath = "/Account/SignOut";
     options.AccessDeniedPath = "/Account/AccessDenied";
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // Allow HTTP in development
     options.SlidingExpiration = true;
 });
 

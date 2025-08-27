@@ -1,0 +1,29 @@
+﻿NEW AZURE AD PKCE APPLICATION CONFIGURATION
+===========================================
+
+Application Name: AssetManagement-PKCE-Pure
+OLD ClientId: 1608d7d8-7c7f-439f-9e1d-629f8691294d
+NEW ClientId: febf3ebc-aed1-4980-bf45-cad3e96cd763
+TenantId: 10a3e7df-a6b1-4ea4-997d-cebfd54c2fa3
+Object ID: 046cb3eb-77b7-4c6c-b2b4-2025b05510d3
+
+Configuration Settings:
+- Sign-In Audience: AzureADMyOrg
+- Public Client Flows: True
+- Application Type: Web (with public client flows)
+- Client Secrets: 0 (not required for PKCE)
+- API Permissions: 0 (pure authentication only)
+
+Redirect URIs:
+https://assets.oathone.com/signin-oidc
+https://localhost:5148/signin-oidc
+http://localhost:5147/signin-oidc
+https://192.168.8.199:5148/signin-oidc
+http://192.168.8.199:5148/signin-oidc
+
+Created: 08/27/2025 05:19:01
+
+NEXT STEPS:
+1. Update appsettings.json with NEW ClientId: febf3ebc-aed1-4980-bf45-cad3e96cd763
+2. Update appsettings.Development.json with NEW ClientId: febf3ebc-aed1-4980-bf45-cad3e96cd763
+3. Restart application and test

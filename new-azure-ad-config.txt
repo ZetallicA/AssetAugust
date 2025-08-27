@@ -1,0 +1,36 @@
+﻿NEW Azure AD Application Configuration
+=====================================
+
+Application Name: Assets for OATH
+OLD ClientId: f582b5e5-e241-4d75-951e-de28f78b16ae
+NEW ClientId: 1608d7d8-7c7f-439f-9e1d-629f8691294d
+TenantId: 10a3e7df-a6b1-4ea4-997d-cebfd54c2fa3
+Object ID: 4f8af6ea-d0a8-4780-9f7e-ebc40c3c6aef
+
+Configuration Settings:
+- Sign-In Audience: AzureADMyOrg
+- Public Client Flows: True
+- Application Type: Web
+
+Redirect URIs:
+https://assets.oathone.com/signin-oidc
+https://192.168.8.199:5148/signin-oidc
+http://192.168.8.199:5148/signin-oidc
+https://localhost:5148/signin-oidc
+http://localhost:5147/signin-oidc
+https://localhost:5147/signin-oidc
+http://localhost:5148/signin-oidc
+
+API Permissions:
+- Microsoft Graph - User.Read (Delegated)
+- Microsoft Graph - openid (Delegated)
+- Microsoft Graph - profile (Delegated)
+- Microsoft Graph - email (Delegated)
+
+Created: 08/26/2025 20:35:18
+
+NEXT STEPS:
+1. Update appsettings.json ClientId: 1608d7d8-7c7f-439f-9e1d-629f8691294d
+2. Remove client secret from user secrets
+3. Uncomment PKCE lines in Program.cs
+4. Restart application and test
